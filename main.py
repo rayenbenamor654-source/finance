@@ -126,7 +126,7 @@ def calculate_savings(initial_balance, annual_rate, operations, year):
 
 # ---------- App setup and visual style ----------
 st.set_page_config(
-    page_title="Finance | Calculs d'intérêts",
+    page_title="Finance | Tableau de bord",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -136,57 +136,98 @@ st.markdown(
     """
     <style>
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-      :root { --ink: #172b4d; --muted: #64748b; --green: #11856b; --line: #e6edf2; }
+      :root {
+        --ink: #20354a;
+        --muted: #718096;
+        --teal: #167c70;
+        --teal-dark: #11675e;
+        --canvas: #f2f0e9;
+        --surface: #faf9f5;
+        --line: #e4e0d5;
+        --gold: #c49a53;
+      }
       html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-      .stApp { background: #f5f8fa; color: var(--ink); }
-      [data-testid="stSidebar"] { background: #102a43; }
-      [data-testid="stSidebar"] * { color: #f3f7fa !important; }
-      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #bed0dc !important; }
-      h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -0.035em; }
-      .hero { padding: 1.65rem 1.9rem; border-radius: 20px; margin: .2rem 0 1.5rem;
-              background: linear-gradient(120deg, #102a43 0%, #174e57 100%); color: white; }
-      .hero h1 { color: white; margin: 0 0 .35rem; font-size: 2rem; }
-      .hero p { color: #d3e2e8; margin: 0; font-size: 1rem; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .14em; color: #85d5bb;
-                 font-weight: 700; font-size: .72rem; margin-bottom: .45rem; }
-      .section-card { background: white; border: 1px solid var(--line); border-radius: 16px;
-                      padding: 1.2rem 1.35rem; margin-bottom: 1rem; }
-      [data-testid="stMetric"] { background: white; border: 1px solid var(--line); border-radius: 14px;
-                                  padding: 1rem 1.15rem; }
-      [data-testid="stMetricLabel"] { color: #64748b; }
-      [data-testid="stMetricValue"] { color: #11856b; font-family: 'Manrope', sans-serif; }
-      div.stButton > button[kind="primary"] { background: #11856b; border: 0; border-radius: 10px; }
-      div.stButton > button[kind="primary"]:hover { background: #0c6d57; }
+      .stApp { background: var(--canvas); color: var(--ink); }
+      [data-testid="stHeader"] { background: rgba(242, 240, 233, .92); }
+      [data-testid="stSidebar"] { background: #20384b; border-right: 1px solid #304a5c; }
+      [data-testid="stSidebar"] * { color: #f2f0e9 !important; }
+      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #c2d0d5 !important; }
+      [data-testid="stSidebar"] hr { border-color: #496070; }
+      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #bdcbd0 !important; }
+      h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -.035em; }
+      .stMainBlockContainer { padding-top: 2rem; }
+      .hero {
+        position: relative; overflow: hidden; padding: 1.8rem 2rem; border-radius: 20px;
+        margin: .15rem 0 1.7rem; color: #f7f5ef;
+        background: linear-gradient(118deg, #20384b 0%, #27665f 100%);
+        box-shadow: 0 14px 34px rgba(32, 56, 75, .13);
+        animation: page-enter .52s cubic-bezier(.2,.7,.25,1) both;
+      }
+      .hero:after {
+        content: ''; position: absolute; width: 240px; height: 240px; border-radius: 50%;
+        right: -65px; top: -130px; border: 1px solid rgba(242,240,233,.17);
+        box-shadow: 0 0 0 24px rgba(242,240,233,.035), 0 0 0 50px rgba(242,240,233,.025);
+      }
+      .hero h1 { color: #f7f5ef; margin: 0 0 .4rem; font-size: 2rem; }
+      .hero p { color: #d7e2dc; margin: 0; font-size: 1rem; }
+      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #d8bd83;
+                 font-weight: 700; font-size: .72rem; margin-bottom: .5rem; }
+      .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+                      padding: 1.2rem 1.35rem; margin-bottom: 1rem; box-shadow: 0 5px 16px rgba(32,53,74,.035); }
+      [data-testid="stVerticalBlockBorderWrapper"] { background: var(--surface); border-radius: 16px; }
+      [data-testid="stMetric"] {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 15px;
+        padding: 1.05rem 1.2rem; box-shadow: 0 5px 16px rgba(32,53,74,.035);
+        animation: metric-enter .55s ease both;
+      }
+      [data-testid="stMetricLabel"] { color: var(--muted); font-weight: 600; }
+      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; }
+      div.stButton > button[kind="primary"] { background: var(--teal); border: 0; border-radius: 10px; }
+      div.stButton > button[kind="primary"]:hover { background: var(--teal-dark); }
       div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input { border-radius: 9px; }
-      .small-note { color: #64748b; font-size: .87rem; }
+      .small-note { color: var(--muted); font-size: .87rem; }
+      [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      @keyframes page-enter {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes metric-enter {
+        0% { opacity: 0; transform: translateY(8px); }
+        65% { opacity: .8; }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *:before, *:after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+      }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 with st.sidebar:
-    st.markdown("## 📊 Finance")
-    st.markdown("Outils de calcul financier")
+    st.markdown("## ◈ FINANCE")
+    st.markdown("Votre espace de calcul financier")
     st.markdown("---")
+    st.markdown("**ESPACE DE TRAVAIL**")
     page = st.radio(
         "Navigation",
         ["1 · Calcul d’intérêt", "2 · Compte d’épargne"],
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.caption("Calculs indicatifs — vérifiez les conventions applicables à votre établissement.")
+    st.caption("Calculs indicatifs · Vérifiez les conditions de votre établissement.")
 
 
 # ---------- Page 1: simple interest ----------
 if page == "1 · Calcul d’intérêt":
     st.markdown(
-        "<div class='hero'><div class='eyebrow'>Outil financier · 01</div>"
+        "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 01</div>"
         "<h1>Calcul d’intérêt simple</h1>"
-        "<p>Estimez les intérêts générés par un capital sur une durée donnée.</p></div>",
+        "<p>Une estimation claire du rendement de votre capital, selon la durée choisie.</p></div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Paramètres du calcul")
+    st.markdown("### Simulateur de rendement")
     left, right = st.columns([1.15, 0.85], gap="large")
     with left:
         with st.container(border=True):
@@ -197,30 +238,29 @@ if page == "1 · Calcul d’intérêt":
             duration = c3.number_input("Durée", min_value=0.0, value=2.0, step=0.5)
             unit = c4.selectbox("Unité de durée", ["Années", "Mois", "Jours"])
             st.markdown(
-                "<p class='small-note'>Pour les jours, le calcul utilise une année commerciale de 360 jours.</p>",
+                "<p class='small-note'>Base de calcul : année commerciale de 360 jours pour une durée en jours.</p>",
                 unsafe_allow_html=True,
             )
 
     with right:
-        year_fraction = Decimal("0")
         if duration > 0:
             interest, final_capital, year_fraction = simple_interest(
                 capital, annual_rate, duration, unit
             )
-            st.markdown("### Résultat")
-            st.metric("Intérêts simples", format_eur(interest))
+            st.markdown("### Votre estimation")
+            st.metric("Intérêts générés", format_eur(interest))
             st.metric("Capital final estimé", format_eur(final_capital))
             st.markdown(
-                f"<div class='section-card'><b>Formule</b><br><span class='small-note'>"
+                f"<div class='section-card'><b>Votre calcul</b><br><span class='small-note'>"
                 f"I = C × t × n<br>"
                 f"{format_eur(capital)} × {annual_rate:.2f} % × {year_fraction:.4f} an(s)"
                 f"</span></div>",
                 unsafe_allow_html=True,
             )
         else:
-            st.info("Saisissez une durée supérieure à zéro pour afficher le résultat.")
+            st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
 
-    with st.expander("Comprendre le calcul"):
+    with st.expander("À propos de la méthode"):
         st.write(
             "Les intérêts simples sont calculés uniquement sur le capital initial : "
             "**I = C × t × n**, où C est le capital, t le taux annuel sous forme décimale "
@@ -231,32 +271,32 @@ if page == "1 · Calcul d’intérêt":
 # ---------- Page 2: savings account ----------
 else:
     st.markdown(
-        "<div class='hero'><div class='eyebrow'>Outil financier · 02</div>"
+        "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Calculez les intérêts annuels selon la méthode des quinzaines et la base 30/360.</p></div>",
+        "<p>Suivez les mouvements et estimez les intérêts annuels selon la règle des quinzaines.</p></div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Paramètres du compte")
+    st.markdown("### Vue d’ensemble du compte")
     c1, c2, c3 = st.columns(3)
     year = int(c1.number_input("Année civile", min_value=1900, max_value=2100, value=2025))
     initial = c2.number_input("Solde au 1er janvier (€)", min_value=0.0, value=1000.0, step=100.0)
     rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
 
-    st.markdown("### Mouvements du compte")
+    st.markdown("### Activité du compte")
     count = int(st.number_input("Nombre d’opérations", min_value=0, max_value=100, value=0, step=1))
     operations = []
 
     if count == 0:
         st.markdown(
-            "<div class='section-card'><b>Aucune opération ajoutée</b><br>"
-            "<span class='small-note'>Le calcul sera effectué sur le solde initial de l’année.</span></div>",
+            "<div class='section-card'><b>Aucun mouvement pour le moment</b><br>"
+            "<span class='small-note'>L’estimation sera calculée sur la base du solde initial.</span></div>",
             unsafe_allow_html=True,
         )
 
     for index in range(count):
         with st.container(border=True):
-            st.markdown(f"**Opération {index + 1}**")
+            st.markdown(f"**Mouvement {index + 1:02d}**")
             cols = st.columns([1.2, 1, 1, 0.8])
             operation_date = cols[0].date_input(
                 "Date de l’opération",
@@ -266,7 +306,7 @@ else:
                 key=f"savings_date_{index}",
             )
             operation_type = cols[1].selectbox(
-                "Type", ["Versement", "Retrait"], key=f"savings_type_{index}"
+                "Type de mouvement", ["Versement", "Retrait"], key=f"savings_type_{index}"
             )
             amount = cols[2].number_input(
                 "Montant (€)", min_value=0.0, value=100.0, step=50.0,
@@ -304,7 +344,7 @@ else:
         summary1.markdown(f"**Total des nombres :** {money(result['total_numbers']):,.2f}")
         summary2.markdown(f"**Diviseur :** {result['divisor']:,.4f}")
 
-        with st.expander("Règle des quinzaines"):
+        with st.expander("Comprendre la règle des quinzaines"):
             st.write(
                 "Un versement prend effet le 1er ou le 16 selon sa date d’opération. "
                 "Un retrait est pris en compte au début de la quinzaine correspondante. "
