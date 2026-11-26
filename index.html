@@ -13,58 +13,80 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
     input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--text);font:inherit}input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:9px 13px;cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button:disabled{opacity:.65;cursor:default}
     .ops{display:grid;gap:8px}.op{display:grid;grid-template-columns:1.2fr 1fr 1.2fr auto 2.4rem;gap:8px;align-items:end}.op-field{min-width:0}.vdate{font-size:12px;color:var(--muted);white-space:nowrap;padding-bottom:9px}
-    button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button.del{padding:8px 0;color:var(--danger)}
-    .row-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;color:var(--muted);font-weight:600}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}tfoot td{font-weight:700;border-bottom:0}
+    button.del{padding:8px 0;color:var(--danger)}.row-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;color:var(--muted);font-weight:600}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}tfoot td{font-weight:700;border-bottom:0}
     .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.kpi{background:var(--soft);border-radius:10px;padding:12px}.kpi span{display:block;font-size:12px;color:var(--muted)}.kpi b{font-size:19px;font-variant-numeric:tabular-nums}.note{font-size:13px;color:var(--muted)}.warn{color:var(--danger)}
+    [hidden]{display:none!important}.revealed{animation:appear .55s ease both}@keyframes appear{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
     @media(max-width:640px){.op{grid-template-columns:1fr 1fr}.op .vdate{grid-column:1/2}}
+    @media(prefers-reduced-motion:reduce){.revealed{animation:none;scroll-behavior:auto}html{scroll-behavior:auto}}
+    html{scroll-behavior:smooth}
     @media print{.noprint{display:none}body{background:#fff;color:#111}.card{break-inside:avoid;border-color:#ccc}.scroll{overflow:visible}table{font-size:11px}}
   </style>
 </head>
 <body>
 <main>
   <h1>Compte d’épargne</h1>
-  <p class="sub">Relevé des opérations · Méthode des quinzaines · Les intérêts ne sont capitalisés et affichés qu’après une opération postérieure à l’échéance choisie.</p>
-  <section class="card noprint"><h2>Paramètres du compte</h2><div class="grid">
-    <div><label for="annee">Année de simulation</label><input id="annee" type="number" value="2025" min="1900" max="2100" step="1"></div>
-    <div><label for="solde0">Capital initial au 1er janvier (TND)</label><input id="solde0" type="number" value="0" min="0" step="0.001"></div>
-    <div><label for="taux">Taux annuel (%)</label><input id="taux" type="number" value="3.5" step="0.01" min="0.01"></div>
-    <div><label for="frequence">Période de capitalisation</label><select id="frequence"><option value="3">Trimestrielle – tous les 3 mois</option><option value="6">Semestrielle – tous les 6 mois</option></select></div>
-  </div></section>
-  <section class="card noprint"><h2>Opérations</h2><div class="ops" id="ops"></div><div class="row-actions"><button class="primary" id="add" type="button">+ Ajouter une opération</button><button id="demo" type="button">Exemple</button><button id="clear" type="button">Tout effacer</button></div><p class="note" id="ignored"></p><p class="warn" id="error" role="alert"></p></section>
-  <section class="card"><h2>Résultat de la simulation</h2><div class="kpis" id="kpis"></div><p class="note" id="status" aria-live="polite"></p></section>
-  <section class="card"><h2>Relevé du compte d’épargne</h2><div class="scroll"><table id="t-ops"></table></div></section>
-  <section class="card"><h2>Détail des intérêts capitalisés</h2><div class="scroll"><table id="t-seg"></table></div><div class="row-actions noprint"><button id="print" type="button">Imprimer / PDF</button></div></section>
+  <p class="sub">Renseignez les paramètres du compte, puis démarrez pour ajouter vos opérations et consulter le relevé.</p>
+
+  <section class="card noprint" id="setup-card">
+    <h2>Ouverture du compte</h2>
+    <div class="grid">
+      <div><label for="date-ouverture">Date d’ouverture du compte</label><input id="date-ouverture" type="date" required></div>
+      <div><label for="solde0">Capital initial (TND)</label><input id="solde0" type="number" value="0" min="0" step="0.001" required></div>
+      <div><label for="taux">Taux annuel (%)</label><input id="taux" type="number" value="3.5" step="0.01" min="0.01" required></div>
+      <div><label for="frequence">Période de capitalisation</label><select id="frequence"><option value="3">Trimestrielle – tous les 3 mois</option><option value="6">Semestrielle – tous les 6 mois</option></select></div>
+    </div>
+    <div class="row-actions"><button class="primary" id="start" type="button">Démarrer le compte d’épargne</button></div>
+    <p class="warn" id="setup-error" role="alert"></p>
+  </section>
+
+  <section class="card noprint" id="operations-card" hidden>
+    <h2>Opérations du compte</h2>
+    <p class="note" id="period-note"></p>
+    <div class="ops" id="ops"></div>
+    <div class="row-actions"><button class="primary" id="add" type="button">+ Ajouter une opération</button><button id="clear" type="button">Tout effacer</button></div>
+    <p class="note" id="ignored"></p><p class="warn" id="error" role="alert"></p>
+  </section>
+
+  <section class="card" id="result-card" hidden><h2>Résultat de la simulation</h2><div class="kpis" id="kpis"></div><p class="note" id="status" aria-live="polite"></p></section>
+  <section class="card" id="statement-card" hidden><h2>Relevé du compte d’épargne</h2><div class="scroll"><table id="t-ops"></table></div></section>
+  <section class="card" id="interest-card" hidden><h2>Détail des intérêts capitalisés</h2><div class="scroll"><table id="t-seg"></table></div><div class="row-actions noprint"><button id="print" type="button">Imprimer / PDF</button></div></section>
   <p class="note">Les intérêts d’une période terminée restent en attente et ne sont pas affichés. Ils sont ajoutés au solde uniquement lorsqu’une opération survient après l’échéance de capitalisation. À la date exacte de l’échéance, ils restent en attente jusqu’à une opération ultérieure. Les dates de valeur des versements et retraits suivent la règle des quinzaines.</p>
 </main>
 <script>
 (function(){
   "use strict";
   const $=id=>document.getElementById(id);
-  const DEMO=[{date:"2025-03-10",type:"V",montant:2000},{date:"2025-06-20",type:"R",montant:1500},{date:"2025-09-05",type:"V",montant:3000},{date:"2025-11-28",type:"R",montant:800}];
-  let ops=DEMO.map(o=>({...o}));
+  let ops=[];
+  let started=false;
   const parse=s=>{const p=s.split("-").map(Number);return{y:p[0],m:p[1],d:p[2]}};
   const key=a=>a.y*10000+a.m*100+a.d;
   const fmt=a=>String(a.d).padStart(2,"0")+"/"+String(a.m).padStart(2,"0")+"/"+a.y;
+  const iso=a=>String(a.y).padStart(4,"0")+"-"+String(a.m).padStart(2,"0")+"-"+String(a.d).padStart(2,"0");
   const days360=(a,b)=>(b.y-a.y)*360+(b.m-a.m)*30+(Math.min(b.d,30)-Math.min(a.d,30));
   const addMonths=(a,n)=>{const total=a.y*12+(a.m-1)+n,y=Math.floor(total/12),m=total%12+1,last=new Date(y,m,0).getDate();return{y,m,d:Math.min(a.d,last)}};
-  const nextMonth=a=>addMonths(a,1);
-  const valVersement=a=>a.d===1||a.d===16?a:a.d<16?{y:a.y,m:a.m,d:16}:nextMonth({...a,d:1});
+  const valVersement=a=>a.d===1||a.d===16?a:a.d<16?{y:a.y,m:a.m,d:16}:addMonths({y:a.y,m:a.m,d:1},1);
   const valRetrait=a=>({y:a.y,m:a.m,d:a.d<=15?1:16});
   const nf3=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
   const round3=n=>Math.round((n+Number.EPSILON)*1000)/1000;
+  function openingDate(){return parse($("date-ouverture").value)}
+  function endDate(){return addMonths(openingDate(),12)}
+  function withinOpeningPeriod(d){return key(d)>=key(openingDate())&&key(d)<key(endDate())}
+  function latest(a,b){return key(a)>=key(b)?a:b}
 
   function compute(){
-    const year=parseInt($("annee").value,10),initial=parseFloat($("solde0").value),rate=parseFloat($("taux").value),months=parseInt($("frequence").value,10);
-    if(!Number.isInteger(year)||year<1900||year>2100)return{error:"Renseignez une année valide (1900–2100)."};
+    const initial=parseFloat($("solde0").value),rate=parseFloat($("taux").value),months=parseInt($("frequence").value,10);
+    if(!$("date-ouverture").value)return{error:"Renseignez la date d’ouverture du compte."};
     if(!(initial>=0))return{error:"Renseignez un capital initial valide."};
     if(!(rate>0))return{error:"Le taux annuel doit être strictement positif."};
-    const start={y:year,m:1,d:1},end={y:year+1,m:1,d:1},valid=[],ignored={};
+    const start=openingDate(),end=addMonths(start,12),valid=[],ignored={};
     for(const o of ops){
       if(!o.date||!(o.montant>0))continue;
       const d=parse(o.date);
-      if(key(d)<key(start)||key(d)>=key(end)){ignored[d.y]=true;continue;}
-      const value=o.type==="V"?valVersement(d):valRetrait(d);
+      if(!withinOpeningPeriod(d)){ignored[d.y]=true;continue;}
+      const value=latest(o.type==="V"?valVersement(d):valRetrait(d),start);
       valid.push({d,v:value,type:o.type,amount:round3(o.montant)*(o.type==="V"?1:-1)});
     }
     valid.sort((a,b)=>key(a.v)-key(b.v)||key(a.d)-key(b.d));
@@ -77,39 +99,40 @@
       cursor=until;
     }
     for(const op of valid){
-      // Strictly later than the scheduled date: an operation on the boundary itself does not trigger capitalization.
       while(key(nextBoundary)<key(op.v)){
         accrue(nextBoundary);
         completedBoundary=true;
-        nextBoundary=addMonths(nextBoundary,months);
+        nextBoundary=addMonths(start,Math.ceil((key(cursor)-key(start))/10000)*0+months);
+        // Advance from the prior boundary using a month offset anchored to opening day.
+        let periods=1;
+        while(key(addMonths(start,months*periods))<=key(cursor))periods++;
+        nextBoundary=addMonths(start,months*periods);
       }
-      // Post only interest accrued through completed periods. Interest in the current, incomplete period stays hidden.
       if(completedBoundary&&key(op.v)>key(cursor)&&pending>0){
         const posted=round3(pending);
         balance=round3(balance+posted);
         credited=round3(credited+posted);
         rows.push({operation:"Capitalisation des intérêts",opDate:"—",valueDate:fmt(op.v),amount:posted,balance});
         segments.push(...pendingSegments);
-        pending=0;
-        pendingSegments.length=0;
-        completedBoundary=false;
+        pending=0;pendingSegments.length=0;completedBoundary=false;
       }
       accrue(op.v);
       balance=round3(balance+op.amount);
       if(balance<0)return{error:"Le retrait du "+fmt(op.d)+" dépasse le solde disponible à sa date de valeur ("+fmt(op.v)+")."};
       rows.push({operation:op.type==="V"?"Versement":"Retrait",opDate:fmt(op.d),valueDate:fmt(op.v),amount:op.amount,balance});
     }
-    // Do not capitalize or expose untriggered interest at year end.
+    // Keep untriggered interest private; it is not included in the interest table or balance.
     accrue(end);
-    return{year,initial,rate,months,rows,segments,credited,balance,ignored:Object.keys(ignored).length};
+    return{initial,rate,months,rows,segments,credited,balance,ignored:Object.keys(ignored).length};
   }
   function render(){
+    if(!started)return;
     const r=compute();
     if(r.error){$("error").textContent=r.error;$("kpis").innerHTML="";$("t-ops").innerHTML="";$("t-seg").innerHTML="";$("status").textContent="";$("ignored").textContent="";return;}
     $("error").textContent="";
-    $("ignored").textContent=r.ignored?"Les opérations hors de l’année sélectionnée sont exclues de la simulation.":"";
+    $("ignored").textContent=r.ignored?"Les opérations en dehors de la période d’un an suivant l’ouverture sont exclues.":"";
     $("kpis").innerHTML='<div class="kpi"><span>Intérêts capitalisés</span><b>'+nf3.format(r.credited)+' TND</b></div>'+
-      '<div class="kpi"><span>Intérêts non affichés</span><b>En attente</b></div>'+
+      '<div class="kpi"><span>Intérêts non capitalisés</span><b>En attente</b></div>'+
       '<div class="kpi"><span>Solde après capitalisations</span><b>'+nf3.format(r.balance)+' TND</b></div>';
     $("status").textContent="Les intérêts en attente ne sont pas affichés. Ils seront capitalisés après une opération dont la date de valeur est postérieure à une échéance de capitalisation.";
     let h='<thead><tr><th>Date d’opération</th><th>Date de valeur</th><th>Mouvement</th><th>Montant (TND)</th><th>Solde après mouvement (TND)</th></tr></thead><tbody>';
@@ -120,24 +143,41 @@
     s+='</tbody><tfoot><tr><td colspan="4">Total des intérêts capitalisés</td><td>'+nf3.format(r.credited)+'</td></tr></tfoot>';
     $("t-seg").innerHTML=s;
   }
-  function label(o){if(!o.date)return"";const d=parse(o.date);return"Date de valeur : "+fmt(o.type==="V"?valVersement(d):valRetrait(d));}
+  function label(o){if(!o.date)return"Choisissez une date";const d=parse(o.date);return"Date de valeur : "+fmt(latest(o.type==="V"?valVersement(d):valRetrait(d),openingDate()))}
   function buildOps(){
     const box=$("ops");box.innerHTML="";
     ops.forEach((o,i)=>{
       const row=document.createElement("div");row.className="op";
-      row.innerHTML='<div class="op-field"><label>Date de l’opération</label><input type="date" aria-label="Date de l’opération"></div><div class="op-field"><label>Type</label><select aria-label="Type d’opération"><option value="V">Versement</option><option value="R">Retrait</option></select></div><div class="op-field"><label>Montant (TND)</label><input type="number" min="0.001" step="0.001" placeholder="Montant" aria-label="Montant en dinars tunisiens"></div><span class="vdate"></span><button type="button" class="del" aria-label="Supprimer cette opération" title="Supprimer">✕</button>';
-      const c=row.children;c[0].querySelector("input").value=o.date;c[1].querySelector("select").value=o.type;c[2].querySelector("input").value=o.montant||"";c[3].textContent=label(o);
-      c[0].querySelector("input").oninput=e=>{o.date=e.target.value;c[3].textContent=label(o);render()};
+      row.innerHTML='<div class="op-field"><label>Date de l’opération</label><input type="date" required aria-label="Date de l’opération"></div><div class="op-field"><label>Type</label><select aria-label="Type d’opération"><option value="V">Versement</option><option value="R">Retrait</option></select></div><div class="op-field"><label>Montant (TND)</label><input type="number" min="0.001" step="0.001" placeholder="Montant" aria-label="Montant en dinars tunisiens"></div><span class="vdate"></span><button type="button" class="del" aria-label="Supprimer cette opération" title="Supprimer">✕</button>';
+      const c=row.children,dateInput=c[0].querySelector("input"),amountInput=c[2].querySelector("input");
+      dateInput.min=iso(openingDate());dateInput.max=iso(addMonths(openingDate(),12));dateInput.value=o.date;
+      c[1].querySelector("select").value=o.type;amountInput.value=o.montant||"";c[3].textContent=label(o);
+      dateInput.oninput=e=>{o.date=e.target.value;c[3].textContent=label(o);render()};
       c[1].querySelector("select").onchange=e=>{o.type=e.target.value;c[3].textContent=label(o);render()};
-      c[2].querySelector("input").oninput=e=>{o.montant=parseFloat(e.target.value)||0;render()};
+      amountInput.oninput=e=>{o.montant=parseFloat(e.target.value)||0;render()};
       c[4].onclick=()=>{ops.splice(i,1);buildOps();render()};box.appendChild(row);
     });
   }
-  $("add").onclick=()=>{ops.push({date:$(`annee`).value+"-01-01",type:"V",montant:0});buildOps();render()};
-  $("demo").onclick=()=>{$("annee").value=2025;$("solde0").value=0;$("taux").value=3.5;$("frequence").value="3";ops=DEMO.map(o=>({...o}));buildOps();render()};
-  $("clear").onclick=()=>{ops=[];buildOps();render()};$("print").onclick=()=>window.print();
-  ["annee","solde0","taux","frequence"].forEach(id=>$(id).oninput=render);
-  buildOps();render();
+  function startAccount(){
+    $("setup-error").textContent="";
+    if(!$("date-ouverture").value){$("setup-error").textContent="Renseignez la date d’ouverture du compte.";$("date-ouverture").focus();return;}
+    if(!$("solde0").reportValidity())return;
+    if(!$("taux").reportValidity())return;
+    started=true;
+    $("date-ouverture").disabled=true;$("solde0").disabled=true;$("taux").disabled=true;$("frequence").disabled=true;
+    $("start").disabled=true;$("start").textContent="Compte démarré";
+    const end=addMonths(openingDate(),12);
+    $("period-note").textContent="Période simulée : du "+fmt(openingDate())+" au "+fmt(end)+" (date de fin exclue).";
+    ["operations-card","result-card","statement-card","interest-card"].forEach(id=>{$(id).hidden=false;$(id).classList.add("revealed")});
+    ops=[];buildOps();render();
+    $("operations-card").scrollIntoView({behavior:"smooth",block:"start"});
+    window.setTimeout(()=>$("add").focus({preventScroll:true}),650);
+  }
+  $("start").onclick=startAccount;
+  $("add").onclick=()=>{const start=openingDate();ops.push({date:iso(start),type:"V",montant:0});buildOps();render();const inputs=$("ops").querySelectorAll("input[type=date]");inputs[inputs.length-1].focus()};
+  $("clear").onclick=()=>{ops=[];buildOps();render()};
+  $("print").onclick=()=>window.print();
+  const today=new Date();$("date-ouverture").value=iso({y:today.getFullYear(),m:today.getMonth()+1,d:today.getDate()});
 })();
 </script>
 </body>
