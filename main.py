@@ -18,6 +18,30 @@ def format_tnd(value):
     return formatted.replace(",", " ").replace(".", ",") + " TND"
 
 
+def compound_interest(capital, annual_rate_percent, duration_years, frequency):
+    """Calculate compound interest with quarterly or semiannual capitalization."""
+    capital = Decimal(str(capital))
+    rate = Decimal(str(annual_rate_percent)) / Decimal("100")
+    duration = Decimal(str(duration_years))
+    periods_per_year = {"Trimestrielle": Decimal("4"), "Semestrielle": Decimal("2")}[frequency]
+
+    if duration < 0:
+        raise ValueError("La durée doit être positive ou égale à zéro.")
+    if rate < 0:
+        raise ValueError("Le taux annuel ne peut pas être négatif.")
+
+    total_periods = duration * periods_per_year
+    if total_periods != total_periods.to_integral_value():
+        raise ValueError("La durée doit correspondre à des périodes complètes de capitalisation.")
+
+    periodic_rate = rate / periods_per_year
+    periods = int(total_periods)
+    growth = (Decimal("1") + periodic_rate) ** periods
+    final_capital = money(capital * growth)
+    interest = money(final_capital - capital)
+    return interest, final_capital, periodic_rate
+
+
 def simple_interest(capital, annual_rate_percent, duration, unit):
     """Calculate simple interest using a 360-day commercial year."""
     capital = Decimal(str(capital))
@@ -215,7 +239,7 @@ st.markdown(
       div[data-testid="stSelectbox"] [role="combobox"] {
         color: var(--ink); background: #ffffff; border: 1px solid #dcd7e8; border-radius: 9px;
       }
-      [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] { color: var(--ink); }
+      [data-testid="stWidgetLabel"] { color: var(--ink); }
       [data-testid="stCaptionContainer"] { color: var(--muted); }
       .small-note { color: var(--muted); font-size: .87rem; }
       [data-testid="stDataFrame"] {
@@ -307,17 +331,42 @@ else:
     st.markdown(
         "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Suivez les mouvements et estimez les intérêts annuels selon la règle des quinzaines.</p></div>",
+        "<p>Simulez la capitalisation trimestrielle ou semestrielle de votre épargne.</p></div>",
         unsafe_allow_html=True,
     )
 
     st.markdown("### Vue d’ensemble du compte")
-    c1, c2, c3 = st.columns(3)
-    year = int(c1.number_input("Année civile", min_value=1900, max_value=2100, value=2025))
-    initial = c2.number_input("Solde au 1er janvier (TND)", min_value=0.0, value=0.0, step=100.0)
-    rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
+    c1, c2, c3, c4, c5 = st.columns(5)
+    start_date = c1.date_input("Date", value=date.today())
+    initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=1000.0, step=100.0)
+    compound_rate = c3.number_input("Taux d’intérêt (%)", min_value=0.0, value=5.0, step=0.25)
+    duration = c4.number_input("Durée (années)", min_value=0.0, value=2.0, step=0.25)
+    frequency = c5.selectbox("Capitalisation", ["Trimestrielle", "Semestrielle"])
+
+    st.markdown("### Estimation de la capitalisation")
+    try:
+        if duration == 0:
+            st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
+        else:
+            interest, final_capital, periodic_rate = compound_interest(
+                initial, compound_rate, duration, frequency
+            )
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Intérêts générés", format_tnd(interest))
+            m2.metric("Capital acquis", format_tnd(final_capital))
+            m3.metric("Taux par période", f"{periodic_rate * Decimal('100'):.4f} %")
+
+        with st.expander("Comprendre la capitalisation"):
+            st.write(
+                "Chaque trimestre ou semestre, les intérêts sont ajoutés au capital puis produisent à leur tour des intérêts. "
+                "La formule utilisée est **Cₙ = C₀ × (1 + r/p)^(p×n)**, où r est le taux annuel, "
+                "p le nombre de périodes par année et n la durée en années."
+            )
+    except ValueError as error:
+        st.error(str(error))
 
     st.markdown("### Activité du compte")
+    year = start_date.year
     operations_key = f"savings_operations_{year}"
     if operations_key not in st.session_state:
         st.session_state[operations_key] = []
@@ -328,7 +377,7 @@ else:
         op_date_col, op_type_col, amount_col, submit_col = st.columns([1.2, 1, 1, 0.8])
         operation_date = op_date_col.date_input(
             "Date de l’opération",
-            value=date(year, 1, 1),
+            value=start_date,
             min_value=date(year, 1, 1),
             max_value=date(year, 12, 31),
             key=f"new_operation_date_{year}",
@@ -367,7 +416,7 @@ else:
         )
 
     try:
-        result = calculate_savings(initial, rate, operations, year)
+        result = calculate_savings(initial, compound_rate, operations, year)
         st.markdown("### Synthèse annuelle")
         m1, m2, m3 = st.columns(3)
         m1.metric("Solde hors intérêts", format_tnd(result["balance"]))
@@ -393,12 +442,5 @@ else:
         summary1, summary2 = st.columns(2)
         summary1.markdown(f"**Total des nombres :** {money(result['total_numbers']):,.2f}")
         summary2.markdown(f"**Diviseur :** {result['divisor']:,.4f}")
-
-        with st.expander("Comprendre la règle des quinzaines"):
-            st.write(
-                "Un versement prend effet le 1er ou le 16 selon sa date d’opération. "
-                "Un retrait est pris en compte au début de la quinzaine correspondante. "
-                "Les intérêts sont calculés sur les soldes successifs, avec une année commerciale de 360 jours."
-            )
     except ValueError as error:
         st.error(str(error))
