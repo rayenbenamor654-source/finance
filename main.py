@@ -7,7 +7,6 @@ import streamlit as st
 TND = Decimal("0.001")
 
 
-# ---------- Calculations ----------
 def money(value):
     return Decimal(str(value)).quantize(TND, rounding=ROUND_HALF_UP)
 
@@ -23,7 +22,6 @@ def compound_interest(capital, annual_rate_percent, duration_years, periods_per_
     capital = Decimal(str(capital))
     rate = Decimal(str(annual_rate_percent)) / Decimal("100")
     duration = Decimal(str(duration_years))
-
     if duration <= 0:
         raise ValueError("La durée de capitalisation doit être supérieure à zéro.")
     if rate < 0:
@@ -32,13 +30,10 @@ def compound_interest(capital, annual_rate_percent, duration_years, periods_per_
     total_periods = duration * Decimal(str(periods_per_year))
     if total_periods != total_periods.to_integral_value():
         raise ValueError("La durée doit correspondre à des périodes de capitalisation complètes.")
-
     periodic_rate = rate / Decimal(str(periods_per_year))
     periods = int(total_periods)
-    growth = (Decimal("1") + periodic_rate) ** periods
-    final_capital = money(capital * growth)
-    interest = money(final_capital - capital)
-    return interest, final_capital, periodic_rate
+    final_capital = money(capital * (Decimal("1") + periodic_rate) ** periods)
+    return money(final_capital - capital), final_capital, periodic_rate
 
 
 def simple_interest(capital, annual_rate_percent, duration, unit):
@@ -67,14 +62,12 @@ def value_date(operation_date, operation_type):
     """Apply the savings account's half-month value-date convention."""
     if operation_type not in ("Versement", "Retrait"):
         raise ValueError("Type d'opération invalide.")
-
     if operation_type == "Versement":
         if operation_date.day in (1, 16):
             return operation_date
         if operation_date.day < 16:
             return date(operation_date.year, operation_date.month, 16)
         return next_month(operation_date)
-
     if operation_date.day <= 15:
         return date(operation_date.year, operation_date.month, 1)
     return date(operation_date.year, operation_date.month, 16)
@@ -93,10 +86,8 @@ def days_360(start, end):
 def calculate_savings(initial_balance, annual_rate, operations, year):
     balance = Decimal(str(initial_balance))
     rate = Decimal(str(annual_rate))
-    start = date(year, 1, 1)
-    end = date(year + 1, 1, 1)
-    valued_operations = []
-    segments = []
+    start, end = date(year, 1, 1), date(year + 1, 1, 1)
+    valued_operations, segments = [], []
 
     for operation_date, operation_type, amount in operations:
         amount = Decimal(str(amount))
@@ -109,18 +100,14 @@ def calculate_savings(initial_balance, annual_rate, operations, year):
 
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
     segment_start = start
-
-    for value, operation_date, operation_type, signed_amount in valued_operations:
-        if value < start:
-            value = start
+    for value, operation_date, _, signed_amount in valued_operations:
+        value = max(value, start)
         if value >= end:
             continue
-
         days = days_360(segment_start, value)
         if days > 0:
             number = balance * Decimal(days) / Decimal("100")
             segments.append((segment_start, value, balance, days, number))
-
         balance += signed_amount
         if balance < 0:
             raise ValueError(
@@ -136,7 +123,6 @@ def calculate_savings(initial_balance, annual_rate, operations, year):
     total_numbers = sum((segment[4] for segment in segments), Decimal("0"))
     if rate <= 0:
         raise ValueError("Le taux annuel doit être supérieur à zéro.")
-
     divisor = Decimal("360") / rate
     interest = money(total_numbers / divisor)
     return {
@@ -161,101 +147,35 @@ st.markdown(
     """
     <style>
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-      :root {
-        color-scheme: light;
-        --ink: #172033;
-        --muted: #667085;
-        --violet: #7357d9;
-        --violet-dark: #5b43b5;
-        --teal: #087e72;
-        --teal-light: #22a99a;
-        --coral: #ef766a;
-        --gold: #d7a43b;
-        --canvas: #f7f4ed;
-        --surface: #ffffff;
-        --soft-violet: #eeeafd;
-        --soft-coral: #fff0ed;
-        --line: #e8e3d8;
-      }
-      html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-      .stApp, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #f8f6ef 0%, #f2f7f5 55%, #f7f1fa 100%);
-        color: var(--ink);
-      }
-      [data-testid="stHeader"] { background: rgba(248, 246, 239, .92); }
-      [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #087e72 0%, #22a99a 100%);
-        border-right: 1px solid #087266;
-      }
-      [data-testid="stSidebar"] * { color: #ffffff !important; }
-      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #e2f7f3 !important; }
-      [data-testid="stSidebar"] hr { border-color: rgba(255, 255, 255, .28); }
-      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #d8f3ef !important; }
-      h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -.035em; }
-      .stMainBlockContainer { padding-top: 2rem; }
-      .estimate-heading {
-        margin: 0 0 1rem; padding-left: .75rem; border-left: 4px solid var(--coral);
-        font-size: 1.6rem; font-weight: 800; line-height: 1.25;
-      }
-      .hero {
-        position: relative; overflow: hidden; padding: 1.8rem 2rem; border-radius: 20px;
-        margin: .15rem 0 1.7rem; color: #ffffff;
-        background: linear-gradient(118deg, #087e72 0%, #159889 55%, #22a99a 100%);
-        box-shadow: 0 14px 34px rgba(8, 126, 114, .18);
-        animation: page-enter .52s cubic-bezier(.2,.7,.25,1) both;
-      }
-      .hero:after {
-        content: ''; position: absolute; width: 240px; height: 240px; border-radius: 50%;
-        right: -65px; top: -130px; border: 1px solid rgba(255,255,255,.35);
-        box-shadow: 0 0 0 24px rgba(255,255,255,.08), 0 0 0 50px rgba(255,255,255,.05);
-      }
-      .hero h1 { color: #ffffff; margin: 0 0 .4rem; font-size: 2rem; }
-      .hero p { color: #e9fffb; margin: 0; font-size: 1rem; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #bff3e9;
-                 font-weight: 800; font-size: .72rem; margin-bottom: .5rem; }
-      .section-card {
-        background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
-        padding: 1.2rem 1.35rem; margin-bottom: 1rem;
-        box-shadow: 0 7px 20px rgba(115, 87, 217, .07);
-      }
-      [data-testid="stVerticalBlockBorderWrapper"] {
-        background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-      }
-      [data-testid="stMetric"] {
-        background: linear-gradient(145deg, #ffffff 0%, #f7f5ff 100%);
-        border: 1px solid #ddd6f5; border-radius: 15px;
-        padding: 1.05rem 1.2rem; box-shadow: 0 7px 20px rgba(115,87,217,.08);
-        animation: metric-enter .55s ease both;
-      }
-      [data-testid="stMetricLabel"] { color: #656d82; font-weight: 700; }
-      [data-testid="stMetricValue"] { color: var(--violet); font-family: 'Manrope', sans-serif; }
-      div.stButton > button[kind="primary"] {
-        background: var(--violet); border: 0; border-radius: 10px; color: #ffffff;
-      }
-      div.stButton > button[kind="primary"]:hover { background: var(--violet-dark); }
-      div[data-testid="stNumberInput"] input,
-      div[data-testid="stDateInput"] input,
-      div[data-testid="stSelectbox"] [role="combobox"] {
-        color: var(--ink); background: #ffffff; border: 1px solid #dcd7e8; border-radius: 9px;
-      }
-      [data-testid="stWidgetLabel"] { color: var(--ink); }
-      [data-testid="stCaptionContainer"] { color: var(--muted); }
-      .small-note { color: var(--muted); font-size: .87rem; }
-      [data-testid="stDataFrame"] {
-        border: 1px solid #dfd8f1; border-radius: 12px; overflow: hidden;
-      }
-      @keyframes page-enter {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes metric-enter {
-        0% { opacity: 0; transform: translateY(8px); }
-        65% { opacity: .8; }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        *, *:before, *:after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-      }
+      :root { color-scheme: light; --ink:#172033; --muted:#667085; --violet:#7357d9; --violet-dark:#5b43b5; --teal:#087e72; --line:#e8e3d8; --surface:#fff; --coral:#ef766a; }
+      html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
+      .stApp, [data-testid="stAppViewContainer"] { background:linear-gradient(135deg,#f8f6ef 0%,#f2f7f5 55%,#f7f1fa 100%); color:var(--ink); }
+      [data-testid="stHeader"] { background:rgba(248,246,239,.92); }
+      [data-testid="stSidebar"] { background:linear-gradient(180deg,#087e72 0%,#22a99a 100%); border-right:1px solid #087266; }
+      [data-testid="stSidebar"] * { color:#fff !important; }
+      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color:#e2f7f3 !important; }
+      [data-testid="stSidebar"] hr { border-color:rgba(255,255,255,.28); }
+      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color:#d8f3ef !important; }
+      h1,h2,h3 { font-family:'Manrope',sans-serif; color:var(--ink); letter-spacing:-.035em; }
+      .stMainBlockContainer { padding-top:2rem; }
+      .estimate-heading { margin:0 0 1rem; padding-left:.75rem; border-left:4px solid var(--coral); font-size:1.6rem; font-weight:800; line-height:1.25; }
+      .hero { position:relative; overflow:hidden; padding:1.8rem 2rem; border-radius:20px; margin:.15rem 0 1.7rem; color:#fff; background:linear-gradient(118deg,#087e72 0%,#159889 55%,#22a99a 100%); box-shadow:0 14px 34px rgba(8,126,114,.18); animation:page-enter .52s cubic-bezier(.2,.7,.25,1) both; }
+      .hero:after { content:''; position:absolute; width:240px; height:240px; border-radius:50%; right:-65px; top:-130px; border:1px solid rgba(255,255,255,.35); box-shadow:0 0 0 24px rgba(255,255,255,.08),0 0 0 50px rgba(255,255,255,.05); }
+      .hero h1 { color:#fff; margin:0 0 .4rem; font-size:2rem; } .hero p { color:#e9fffb; margin:0; font-size:1rem; }
+      .eyebrow { text-transform:uppercase; letter-spacing:.15em; color:#bff3e9; font-weight:800; font-size:.72rem; margin-bottom:.5rem; }
+      .section-card { background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:16px; padding:1.2rem 1.35rem; margin-bottom:1rem; box-shadow:0 7px 20px rgba(115,87,217,.07); }
+      [data-testid="stVerticalBlockBorderWrapper"] { background:var(--surface); border:1px solid var(--line); border-radius:16px; }
+      [data-testid="stMetric"] { background:linear-gradient(145deg,#fff 0%,#f7f5ff 100%); border:1px solid #ddd6f5; border-radius:15px; padding:1.05rem 1.2rem; box-shadow:0 7px 20px rgba(115,87,217,.08); animation:metric-enter .55s ease both; }
+      [data-testid="stMetricLabel"] { color:#656d82; font-weight:700; } [data-testid="stMetricValue"] { color:var(--violet); font-family:'Manrope',sans-serif; }
+      div.stButton>button[kind="primary"], div[data-testid="stFormSubmitButton"] button[kind="primary"] { background:var(--violet); border:0; border-radius:10px; color:#fff; }
+      div.stButton>button[kind="primary"]:hover, div[data-testid="stFormSubmitButton"] button[kind="primary"]:hover { background:var(--violet-dark); }
+      div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input, div[data-testid="stSelectbox"] [role="combobox"] { color:var(--ink); background:#fff; border:1px solid #dcd7e8; border-radius:9px; }
+      [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] { color:var(--ink); } [data-testid="stCaptionContainer"] { color:var(--muted); }
+      .small-note { color:var(--muted); font-size:.87rem; }
+      [data-testid="stDataFrame"] { border:1px solid #dfd8f1; border-radius:12px; overflow:hidden; }
+      @keyframes page-enter { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes metric-enter { 0% { opacity:0; transform:translateY(8px); } 65% { opacity:.8; } 100% { opacity:1; transform:translateY(0); } }
+      @media (prefers-reduced-motion:reduce) { *,*:before,*:after { animation-duration:.01ms !important; animation-iteration-count:1 !important; } }
     </style>
     """,
     unsafe_allow_html=True,
@@ -283,7 +203,6 @@ if page == "1 · Calcul d’intérêt":
         "<p>Une estimation claire du rendement de votre capital, selon la durée choisie.</p></div>",
         unsafe_allow_html=True,
     )
-
     st.markdown("### Simulateur de rendement")
     left, right = st.columns([1.15, 0.85], gap="large")
     with left:
@@ -294,28 +213,28 @@ if page == "1 · Calcul d’intérêt":
             c3, c4 = st.columns(2)
             unit = c4.selectbox("Unité de durée", ["Années", "Mois", "Jours"])
             if unit == "Jours":
-                duration = c3.number_input(
-                    "Durée", min_value=0, value=2, step=1, format="%d", key="duration_days"
-                )
+                duration = c3.number_input("Durée", min_value=0, value=2, step=1, format="%d", key="duration_days")
             else:
-                duration = c3.number_input(
-                    "Durée", min_value=0.0, value=2.0, step=0.5, key=f"duration_{unit}"
-                )
+                duration = c3.number_input("Durée", min_value=0.0, value=2.0, step=0.5, key=f"duration_{unit}")
             st.markdown(
                 "<p class='small-note'>Base de calcul : année commerciale de 360 jours pour une durée en jours.</p>",
                 unsafe_allow_html=True,
             )
+            calculate_simple = st.button("Calculer l’intérêt simple", type="primary")
 
+    if calculate_simple:
+        st.session_state.simple_interest_result = (
+            simple_interest(capital, annual_rate, duration, unit) if duration > 0 else None
+        )
     with right:
-        if duration > 0:
-            interest, final_capital, _ = simple_interest(
-                capital, annual_rate, duration, unit
-            )
+        result = st.session_state.get("simple_interest_result")
+        if result:
+            interest, final_capital, _ = result
             st.markdown("<h2 class='estimate-heading'>Votre estimation</h2>", unsafe_allow_html=True)
             st.metric("Intérêts générés", format_tnd(interest))
             st.metric("Capital final estimé", format_tnd(final_capital))
         else:
-            st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
+            st.info("Complétez les paramètres puis cliquez sur « Calculer l’intérêt simple ».")
 
     with st.expander("À propos de la méthode"):
         st.write(
@@ -334,42 +253,69 @@ else:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Vue d’ensemble du compte")
-    c1, c2, c3, c4 = st.columns(4)
-    start_date = c1.date_input("Date", value=date.today())
-    initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=1000.0, step=100.0)
-    compound_rate = c3.number_input("Taux d’intérêt (%)", min_value=0.0, value=5.0, step=0.25)
+    account_key = "savings_account"
+    if not st.session_state.get("savings_account_started", False):
+        st.markdown("### Démarrer un compte d’épargne")
+        with st.form("start_savings_account_form"):
+            c1, c2, c3, c4 = st.columns(4)
+            start_date = c1.date_input("Date de début", value=date.today())
+            initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
+            compound_rate = c3.number_input("Taux d’intérêt (%)", min_value=0.0, value=5.0, step=0.25)
+            capitalization_duration = c4.selectbox(
+                "Durée de capitalisation", ["3 mois", "6 mois", "1 an"]
+            )
+            start_account = st.form_submit_button("Démarrer le compte épargne", type="primary")
 
-    capitalization_duration = c4.selectbox(
-        "Durée de capitalisation",
-        ["3 mois", "6 mois", "1 an"],
-    )
+        if start_account:
+            st.session_state[account_key] = {
+                "date": start_date,
+                "initial": initial,
+                "rate": compound_rate,
+                "capitalization_duration": capitalization_duration,
+            }
+            st.session_state.savings_account_started = True
+            st.rerun()
+        st.info("Renseignez les paramètres du compte, puis cliquez sur « Démarrer le compte épargne ».")
+        st.stop()
+
+    account = st.session_state[account_key]
+    start_date = account["date"]
+    initial = account["initial"]
+    compound_rate = account["rate"]
+    capitalization_duration = account["capitalization_duration"]
     capitalization_options = {
         "3 mois": (4, "Trimestrielle"),
         "6 mois": (2, "Semestrielle"),
         "1 an": (1, "Annuelle"),
     }
     periods_per_year, capitalization_label = capitalization_options[capitalization_duration]
+    st.markdown("### Vue d’ensemble du compte")
+    info1, info2, info3, info4 = st.columns(4)
+    info1.metric("Date de début", start_date.strftime("%d/%m/%Y"))
+    info2.metric("Capital initial", format_tnd(initial))
+    info3.metric("Taux d’intérêt", f"{compound_rate:.2f} %")
+    info4.metric("Durée de capitalisation", capitalization_duration)
+
+    if st.button("Fermer le compte et recommencer"):
+        st.session_state.savings_account_started = False
+        st.session_state.pop(account_key, None)
+        st.rerun()
 
     st.markdown("### Estimation de la capitalisation")
-    try:
-        interest, final_capital, periodic_rate = compound_interest(
-            initial, compound_rate, 1.0, periods_per_year
+    interest, final_capital, periodic_rate = compound_interest(
+        initial, compound_rate, 1.0, periods_per_year
+    )
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Intérêts générés sur 1 an", format_tnd(interest))
+    m2.metric("Capital acquis après 1 an", format_tnd(final_capital))
+    m3.metric("Taux par période", f"{periodic_rate * Decimal('100'):.4f} %")
+    with st.expander("Comprendre la capitalisation"):
+        st.write(
+            f"Avec une durée de capitalisation de **{capitalization_duration}**, les intérêts sont ajoutés au capital "
+            f"{capitalization_label.lower()} puis produisent à leur tour des intérêts. "
+            "La formule utilisée est **Cₙ = C₀ × (1 + r/p)^(p×n)**, où r est le taux annuel, "
+            "p le nombre de périodes par année et n la durée en années."
         )
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Intérêts générés sur 1 an", format_tnd(interest))
-        m2.metric("Capital acquis après 1 an", format_tnd(final_capital))
-        m3.metric("Capitalisation", capitalization_label)
-
-        with st.expander("Comprendre la capitalisation"):
-            st.write(
-                f"Avec une durée de capitalisation de **{capitalization_duration}**, les intérêts sont ajoutés au capital "
-                f"{capitalization_label.lower()} puis produisent à leur tour des intérêts. "
-                "La formule utilisée est **Cₙ = C₀ × (1 + r/p)^(p×n)**, où r est le taux annuel, "
-                "p le nombre de périodes par année et n la durée en années."
-            )
-    except ValueError as error:
-        st.error(str(error))
 
     st.markdown("### Activité du compte")
     year = start_date.year
@@ -382,10 +328,8 @@ else:
         st.markdown("**Ajouter une opération**")
         op_date_col, op_type_col, amount_col, submit_col = st.columns([1.2, 1, 1, 0.8])
         operation_date = op_date_col.date_input(
-            "Date de l’opération",
-            value=start_date,
-            min_value=date(year, 1, 1),
-            max_value=date(year, 12, 31),
+            "Date de l’opération", value=start_date,
+            min_value=date(year, 1, 1), max_value=date(year, 12, 31),
             key=f"new_operation_date_{year}",
         )
         operation_type = op_type_col.selectbox(
