@@ -1,60 +1,51 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Compte d’épargne – Intérêts simples</title>
-<style>
-:root{
-  --bg:#f6f7f9;--card:#fff;--text:#1b2330;--muted:#667085;--line:#e3e7ee;
-  --accent:#0f6b5c;--accent-soft:#e3f3ef;--danger:#b42318;--input:#fff;
-  color-scheme:light;
-  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#12161c;--card:#1b212a;--text:#e8ecf2;--muted:#9aa4b2;--line:#2c3440;
-  --accent:#4fc3a8;--accent-soft:#17352e;--danger:#f97066;--input:#12161c;color-scheme:dark;}}
-:root[data-theme="dark"]{
-  --bg:#12161c;--card:#1b212a;--text:#e8ecf2;--muted:#9aa4b2;--line:#2c3440;
-  --accent:#4fc3a8;--accent-soft:#17352e;--danger:#f97066;--input:#12161c;color-scheme:dark;}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
-h1{font-size:22px;margin:0 0 4px}
-.sub{color:var(--muted);margin:0 0 20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--text);font:inherit}
-input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
-.ops{display:grid;gap:8px}
-.op{display:grid;grid-template-columns:1.2fr 1fr 1.2fr auto 2.4rem;gap:8px;align-items:center}
-.vdate{font-size:12px;color:var(--muted);white-space:nowrap}
-button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.del{padding:8px 0;color:var(--danger)}
-.row-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-th{font-size:12px;color:var(--muted);font-weight:600}
-th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
-tfoot td{font-weight:700;border-bottom:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.kpi{background:var(--accent-soft);border-radius:10px;padding:12px}
-.kpi span{display:block;font-size:12px;color:var(--muted)}
-.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
-.formula{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted);margin:12px 0 0;overflow-wrap:anywhere}
-.note{font-size:13px;color:var(--muted)}
-.warn{color:var(--danger)}
-@media (max-width:640px){
-  .op{grid-template-columns:1fr 1fr;}
-  .op .vdate{grid-column:1/2}
-}
-@media print{.noprint{display:none}body{background:#fff}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Compte d’épargne – Intérêts simples</title>
+  <style>
+    :root {
+      --bg:#f6f7f9; --card:#fff; --text:#1b2330; --muted:#667085; --line:#e3e7ee;
+      --accent:#0f6b5c; --accent-soft:#e3f3ef; --danger:#b42318; --input:#fff;
+      color-scheme:light;
+    }
+    @media (prefers-color-scheme:dark) {
+      :root:not([data-theme="light"]){
+        --bg:#12161c; --card:#1b212a; --text:#e8ecf2; --muted:#9aa4b2; --line:#2c3440;
+        --accent:#4fc3a8; --accent-soft:#17352e; --danger:#f97066; --input:#12161c; color-scheme:dark;
+      }
+    }
+    :root[data-theme="dark"]{
+      --bg:#12161c; --card:#1b212a; --text:#e8ecf2; --muted:#9aa4b2; --line:#2c3440;
+      --accent:#4fc3a8; --accent-soft:#17352e; --danger:#f97066; --input:#12161c; color-scheme:dark;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+    main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+    h1{font-size:22px;margin:0 0 4px} .sub{color:var(--muted);margin:0 0 20px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+    h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+    input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--text);font:inherit}
+    input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .ops{display:grid;gap:8px}
+    .op{display:grid;grid-template-columns:1.2fr 1fr 1.2fr auto 2.4rem;gap:8px;align-items:end}
+    .op-field{min-width:0}.op-field label{white-space:nowrap}.vdate{font-size:12px;color:var(--muted);white-space:nowrap;padding-bottom:9px}
+    button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer}
+    button.primary{background:var(--accent);border-color:var(--accent);color:#fff} button.del{padding:8px 0;color:var(--danger)}
+    .row-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+    th{font-size:12px;color:var(--muted);font-weight:600} th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+    tfoot td{font-weight:700;border-bottom:0}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .kpi{background:var(--accent-soft);border-radius:10px;padding:12px}.kpi span{display:block;font-size:12px;color:var(--muted)}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+    .formula{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted);margin:12px 0 0;overflow-wrap:anywhere}
+    .note{font-size:13px;color:var(--muted)}.warn{color:var(--danger)}
+    @media (max-width:640px){.op{grid-template-columns:1fr 1fr}.op .vdate{grid-column:1/2}}
+    @media print{.noprint{display:none}body{background:#fff}.card{break-inside:avoid}.scroll{overflow:visible}table{font-size:11px}}
+  </style>
 </head>
 <body>
 <main>
@@ -64,8 +55,8 @@ tfoot td{font-weight:700;border-bottom:0}
   <section class="card noprint">
     <h2>Paramètres</h2>
     <div class="grid">
-      <div><label for="annee">Année civile</label><input id="annee" type="number" value="2025" step="1"></div>
-      <div><label for="solde0">Solde au 01/01</label><input id="solde0" type="number" value="5000" step="0.001"></div>
+      <div><label for="annee">Année civile</label><input id="annee" type="number" value="2025" min="1900" max="2100" step="1"></div>
+      <div><label for="solde0">Solde au 01/01 (TND)</label><input id="solde0" type="number" value="5000" min="0" step="0.001"></div>
       <div><label for="taux">Taux annuel (%)</label><input id="taux" type="number" value="3.5" step="0.01" min="0.01"></div>
     </div>
   </section>
@@ -75,167 +66,113 @@ tfoot td{font-weight:700;border-bottom:0}
     <div class="ops" id="ops"></div>
     <div class="row-actions">
       <button class="primary" id="add">+ Ajouter une opération</button>
-      <button id="demo">Exemple</button>
-      <button id="clear">Tout effacer</button>
+      <button id="demo">Exemple</button><button id="clear">Tout effacer</button>
     </div>
-    <p class="note" id="ignored"></p>
+    <p class="note" id="ignored"></p><p class="warn" id="error" role="alert"></p>
   </section>
 
-  <section class="card">
-    <h2>Résultat</h2>
-    <div class="kpis" id="kpis"></div>
-    <p class="formula" id="formula"></p>
-  </section>
-
-  <section class="card">
-    <h2>Relevé des opérations</h2>
-    <div class="scroll"><table id="t-ops"></table></div>
-  </section>
-
-  <section class="card">
-    <h2>Calcul des nombres</h2>
-    <div class="scroll"><table id="t-seg"></table></div>
-    <div class="row-actions noprint"><button id="print">Imprimer / PDF</button></div>
-  </section>
-
-  <p class="note">Règles : un versement porte intérêt à partir du 1<sup>er</sup> ou du 16 qui le suit (le jour même s’il tombe un 1<sup>er</sup> ou un 16) ; un retrait cesse de porter intérêt au 1<sup>er</sup> ou au 16 qui le précède. Nombres N = C × n / 100 ; diviseur D = 360 / t ; intérêt I = ΣN / D.</p>
+  <section class="card"><h2>Résultat</h2><div class="kpis" id="kpis"></div><p class="formula" id="formula"></p></section>
+  <section class="card"><h2>Relevé des opérations</h2><div class="scroll"><table id="t-ops"></table></div></section>
+  <section class="card"><h2>Calcul des nombres</h2><div class="scroll"><table id="t-seg"></table></div><div class="row-actions noprint"><button id="print">Imprimer / PDF</button></div></section>
+  <p class="note">Règles : un versement prend effet le 1er ou le 16 qui suit sa date ; un retrait prend effet au 1er ou au 16 selon la quinzaine.</p>
 </main>
-
 <script>
 (function(){
-  var $ = function(id){return document.getElementById(id)};
-  var DEMO = [
-    {date:"2025-03-10",type:"V",montant:2000},
-    {date:"2025-06-20",type:"R",montant:1500},
-    {date:"2025-09-05",type:"V",montant:3000},
-    {date:"2025-11-28",type:"R",montant:800}
+  "use strict";
+  const $=id=>document.getElementById(id);
+  const DEMO=[
+    {date:"2025-03-10",type:"V",montant:2000},{date:"2025-06-20",type:"R",montant:1500},
+    {date:"2025-09-05",type:"V",montant:3000},{date:"2025-11-28",type:"R",montant:800}
   ];
-  var ops = DEMO.map(function(o){return Object.assign({},o)});
+  let ops=DEMO.map(o=>({...o}));
 
-  /* ---------- Dates (objets simples, sans fuseau) ---------- */
-  function parse(s){var p=s.split("-").map(Number);return {y:p[0],m:p[1],d:p[2]}}
-  function key(a){return a.y*10000+a.m*100+a.d}
-  function fmt(a){return String(a.d).padStart(2,"0")+"/"+String(a.m).padStart(2,"0")+"/"+a.y}
-  function days360(a,b){
-    return (b.y-a.y)*360+(b.m-a.m)*30+(Math.min(b.d,30)-Math.min(a.d,30));
-  }
-  function nextMonth(a){return a.m===12?{y:a.y+1,m:1,d:1}:{y:a.y,m:a.m+1,d:1}}
-  function valVersement(a){
-    if(a.d===1||a.d===16) return a;
-    if(a.d<16) return {y:a.y,m:a.m,d:16};
-    return nextMonth(a);
-  }
-  function valRetrait(a){return {y:a.y,m:a.m,d:a.d<16?1:16}}
+  const parse=s=>{const p=s.split("-").map(Number);return {y:p[0],m:p[1],d:p[2]}};
+  const key=a=>a.y*10000+a.m*100+a.d;
+  const fmt=a=>String(a.d).padStart(2,"0")+"/"+String(a.m).padStart(2,"0")+"/"+a.y;
+  const days360=(a,b)=>(b.y-a.y)*360+(b.m-a.m)*30+(Math.min(b.d,30)-Math.min(a.d,30));
+  const nextMonth=a=>a.m===12?{y:a.y+1,m:1,d:1}:{y:a.y,m:a.m+1,d:1};
+  const valVersement=a=>a.d===1||a.d===16?a:a.d<16?{y:a.y,m:a.m,d:16}:nextMonth(a);
+  const valRetrait=a=>({y:a.y,m:a.m,d:a.d<=15?1:16});
 
-  /* ---------- Formats nombres ---------- */
-  var nf3 = new Intl.NumberFormat("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
-  var nf2 = new Intl.NumberFormat("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
-  var nf4 = new Intl.NumberFormat("fr-FR",{minimumFractionDigits:4,maximumFractionDigits:4});
+  const nf3=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
+  const nf2=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nf4=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:4,maximumFractionDigits:4});
+  const round3=n=>Math.round((n+Number.EPSILON)*1000)/1000;
 
-  /* ---------- Calcul ---------- */
   function compute(){
-    var annee = parseInt($("annee").value,10);
-    var solde0 = parseFloat($("solde0").value)||0;
-    var taux = parseFloat($("taux").value);
-    if(!annee||!(taux>0)) return null;
-    var debut={y:annee,m:1,d:1}, fin={y:annee+1,m:1,d:1};
-    var valides=[], ignores=0;
-    ops.forEach(function(o){
-      if(!o.date||!(o.montant>0)){return}
-      var d=parse(o.date);
-      if(key(d)<key(debut)||key(d)>=key(fin)){ignores++;return}
-      var signed=o.type==="V"?o.montant:-o.montant;
-      var v=o.type==="V"?valVersement(d):valRetrait(d);
-      valides.push({d:d,v:v,type:o.type,montant:signed});
-    });
-    valides.sort(function(a,b){return key(a.d)-key(b.d)});
-    var evts=valides.map(function(o){
-      return {v:key(o.v)<key(debut)?debut:o.v,m:o.montant};
-    }).sort(function(a,b){return key(a.v)-key(b.v)});
-    var seg=[],solde=solde0,reel=solde0,cur=debut;
-    evts.forEach(function(e){
-      reel+=e.m;
-      if(key(e.v)>=key(fin)) return;
-      var n=days360(cur,e.v);
-      if(n>0) seg.push({a:cur,b:e.v,solde:solde,n:n,N:solde*n/100});
-      solde+=e.m;cur=e.v;
-    });
-    var n=days360(cur,fin);
-    if(n>0) seg.push({a:cur,b:fin,solde:solde,n:n,N:solde*n/100});
-    var tot=seg.reduce(function(s,x){return s+x.N},0);
-    var D=360/taux, I=Math.round(tot/D*1000)/1000;
-    return {annee:annee,solde0:solde0,taux:taux,ops:valides,seg:seg,tot:tot,D:D,I:I,
-            cap:Math.round((reel+I)*1000)/1000,reel:reel,ignores:ignores};
+    const annee=parseInt($("annee").value,10), solde0=parseFloat($("solde0").value), taux=parseFloat($("taux").value);
+    if(!Number.isInteger(annee)||annee<1900||annee>2100)return {error:"Renseignez une année valide (1900–2100)."};
+    if(!(solde0>=0))return {error:"Renseignez un solde initial valide."};
+    if(!(taux>0))return {error:"Le taux annuel doit être strictement positif."};
+
+    const debut={y:annee,m:1,d:1}, fin={y:annee+1,m:1,d:1};
+    const valides=[], ignores={};
+    for(const o of ops){
+      if(!o.date||!(o.montant>0))continue;
+      const d=parse(o.date);
+      if(key(d)<key(debut)||key(d)>=key(fin)){ignores[d.y]=true;continue}
+      const montant=round3(o.montant);
+      const v=o.type==="V"?valVersement(d):valRetrait(d);
+      valides.push({d,v,type:o.type,montant:o.type==="V"?montant:-montant});
+    }
+    valides.sort((a,b)=>key(a.v)-key(b.v)||key(a.d)-key(b.d));
+
+    const seg=[],curEnd=fin;let solde=round3(solde0),cur=debut;
+    for(const e of valides){
+      let v=e.v;if(key(v)<key(debut))v=debut;if(key(v)>=key(fin))continue;
+      const n=days360(cur,v);if(n>0){const N=solde*n/100;seg.push({a:cur,b:v,solde,n,N})}
+      solde=round3(solde+e.montant);
+      if(solde<0)return {error:"Retrait supérieur au solde disponible à sa date de valeur ("+fmt(v)+")."};
+      cur=v;
+    }
+    const n=days360(cur,fin);if(n>0){const N=solde*n/100;seg.push({a:cur,b:fin,solde,n,N})}
+    const tot=seg.reduce((s,x)=>s+x.N,0), D=360/taux, I=round3(tot/D), cap=round3(solde+I);
+    return {annee,solde0,taux,ops:valides,seg,tot,D,I,cap,reel:solde,ignores:Object.keys(ignores).length};
   }
 
-  /* ---------- Rendu des résultats ---------- */
   function render(){
-    var r=compute();
-    if(!r){
-      $("kpis").innerHTML='<p class="warn">Renseignez une année et un taux valides.</p>';
-      $("formula").textContent="";$("t-ops").innerHTML="";$("t-seg").innerHTML="";$("ignored").textContent="";
-      return;
+    const r=compute();
+    if(r.error){
+      $("error").textContent=r.error;$("kpis").innerHTML="";$("formula").textContent="";$("t-ops").innerHTML="";$("t-seg").innerHTML="";$("ignored").textContent="";return;
     }
-    $("ignored").textContent=r.ignores?(r.ignores+" opération(s) hors de l’année "+r.annee+" ignorée(s)."):"";
-    $("kpis").innerHTML=
-      '<div class="kpi"><span>Intérêts de l’année</span><b>'+nf3.format(r.I)+'</b></div>'+
-      '<div class="kpi"><span>Capital acquis au 31/12/'+r.annee+'</span><b>'+nf3.format(r.cap)+'</b></div>'+
+    $("error").textContent="";
+    $("ignored").textContent=r.ignores?"Des opérations hors de l’année sélectionnée sont ignorées.":"";
+    $("kpis").innerHTML='<div class="kpi"><span>Intérêts de l’année</span><b>'+nf3.format(r.I)+' TND</b></div>'+
+      '<div class="kpi"><span>Capital acquis au 31/12/'+r.annee+'</span><b>'+nf3.format(r.cap)+' TND</b></div>'+
       '<div class="kpi"><span>Total des nombres</span><b>'+nf2.format(r.tot)+'</b></div>';
-    $("formula").textContent="D = 360 / "+r.taux+" = "+nf4.format(r.D)+"   ·   I = "+nf2.format(r.tot)+" / "+nf4.format(r.D)+" = "+nf3.format(r.I);
+    $("formula").textContent="D = 360 / "+r.taux+" = "+nf4.format(r.D)+"   ·   I = "+nf2.format(r.tot)+" / "+nf4.format(r.D)+" = "+nf3.format(r.I)+" TND";
 
-    var h='<thead><tr><th>Date</th><th>Opération</th><th>Montant</th><th>Date de valeur</th></tr></thead><tbody>';
+    let h='<thead><tr><th>Date</th><th>Opération</th><th>Montant (TND)</th><th>Date de valeur</th></tr></thead><tbody>';
     h+='<tr><td>01/01/'+r.annee+'</td><td>Solde initial</td><td>'+nf3.format(r.solde0)+'</td><td>01/01/'+r.annee+'</td></tr>';
-    r.ops.forEach(function(o){
-      h+='<tr><td>'+fmt(o.d)+'</td><td>'+(o.type==="V"?"Versement":"Retrait")+'</td><td>'+nf3.format(o.montant)+'</td><td>'+fmt(o.v)+'</td></tr>';
-    });
+    r.ops.forEach(o=>h+='<tr><td>'+fmt(o.d)+'</td><td>'+((o.type==="V")?"Versement":"Retrait")+'</td><td>'+nf3.format(o.montant)+'</td><td>'+fmt(o.v)+'</td></tr>');
     $("t-ops").innerHTML=h+'</tbody>';
 
-    var s='<thead><tr><th>Du</th><th>Au</th><th>Solde</th><th>Jours</th><th>Nombres</th></tr></thead><tbody>';
-    r.seg.forEach(function(x){
-      s+='<tr><td>'+fmt(x.a)+'</td><td>'+fmt(x.b)+'</td><td>'+nf3.format(x.solde)+'</td><td>'+x.n+'</td><td>'+nf2.format(x.N)+'</td></tr>';
-    });
-    s+='</tbody><tfoot><tr><td colspan="4">Total des nombres</td><td>'+nf2.format(r.tot)+'</td></tr></tfoot>';
-    $("t-seg").innerHTML=s;
+    let s='<thead><tr><th>Du</th><th>Au</th><th>Solde (TND)</th><th>Jours</th><th>Nombres</th></tr></thead><tbody>';
+    r.seg.forEach(x=>s+='<tr><td>'+fmt(x.a)+'</td><td>'+fmt(x.b)+'</td><td>'+nf3.format(x.solde)+'</td><td>'+x.n+'</td><td>'+nf2.format(x.N)+'</td></tr>');
+    s+='</tbody><tfoot><tr><td colspan="4">Total des nombres</td><td>'+nf2.format(r.tot)+'</td></tr></tfoot>';$("t-seg").innerHTML=s;
   }
 
-  /* ---------- Édition des opérations ---------- */
-  function vdateLabel(o){
-    if(!o.date) return "";
-    var d=parse(o.date);
-    return "valeur : "+fmt(o.type==="V"?valVersement(d):valRetrait(d));
-  }
+  function vdateLabel(o){if(!o.date)return "";const d=parse(o.date);return "valeur : "+fmt(o.type=== "V"?valVersement(d):valRetrait(d));}
   function buildOps(){
-    var box=$("ops");box.innerHTML="";
-    ops.forEach(function(o,i){
-      var row=document.createElement("div");row.className="op";
-      row.innerHTML=
-        '<input type="date" aria-label="Date">'+
-        '<select aria-label="Type"><option value="V">Versement</option><option value="R">Retrait</option></select>'+
-        '<input type="number" min="0" step="0.001" placeholder="Montant" aria-label="Montant">'+
-        '<span class="vdate"></span>'+
-        '<button class="del" aria-label="Supprimer">✕</button>';
-      var c=row.children;
-      c[0].value=o.date;c[1].value=o.type;c[2].value=o.montant||"";
-      c[3].textContent=vdateLabel(o);
-      c[0].oninput=function(){o.date=c[0].value;c[3].textContent=vdateLabel(o);render()};
-      c[1].onchange=function(){o.type=c[1].value;c[3].textContent=vdateLabel(o);render()};
-      c[2].oninput=function(){o.montant=parseFloat(c[2].value)||0;render()};
-      c[4].onclick=function(){ops.splice(i,1);buildOps();render()};
-      box.appendChild(row);
+    const box=$("ops");box.innerHTML="";
+    ops.forEach((o,i)=>{
+      const row=document.createElement("div");row.className="op";
+      row.innerHTML='<div class="op-field"><label>Date de l’opération</label><input type="date" aria-label="Date de l’opération"></div>'+ 
+        '<div class="op-field"><label>Type</label><select aria-label="Type d’opération"><option value="V">Versement</option><option value="R">Retrait</option></select></div>'+ 
+        '<div class="op-field"><label>Montant (TND)</label><input type="number" min="0.001" step="0.001" placeholder="Montant" aria-label="Montant en dinars tunisiens"></div>'+ 
+        '<span class="vdate"></span><button type="button" class="del" aria-label="Supprimer cette opération" title="Supprimer">✕</button>';
+      const c=row.children;c[0].querySelector("input").value=o.date;c[1].querySelector("select").value=o.type;c[2].querySelector("input").value=o.montant||"";c[3].textContent=vdateLabel(o);
+      c[0].querySelector("input").oninput=e=>{o.date=e.target.value;c[3].textContent=vdateLabel(o);render()};
+      c[1].querySelector("select").onchange=e=>{o.type=e.target.value;c[3].textContent=vdateLabel(o);render()};
+      c[2].querySelector("input").oninput=e=>{o.montant=parseFloat(e.target.value)||0;render()};
+      c[4].onclick=()=>{ops.splice(i,1);buildOps();render()};box.appendChild(row);
     });
   }
 
-  $("add").onclick=function(){
-    ops.push({date:$("annee").value+"-01-01",type:"V",montant:0});buildOps();render();
-  };
-  $("demo").onclick=function(){
-    $("annee").value=2025;$("solde0").value=5000;$("taux").value=3.5;
-    ops=DEMO.map(function(o){return Object.assign({},o)});buildOps();render();
-  };
-  $("clear").onclick=function(){ops=[];buildOps();render()};
-  $("print").onclick=function(){window.print()};
-  ["annee","solde0","taux"].forEach(function(id){$(id).oninput=render});
-
+  $("add").onclick=()=>{ops.push({date:$("annee").value+"-01-01",type:"V",montant:0});buildOps();render()};
+  $("demo").onclick=()=>{$("annee").value=2025;$("solde0").value=5000;$("taux").value=3.5;ops=DEMO.map(o=>({...o}));buildOps();render()};
+  $("clear").onclick=()=>{ops=[];buildOps();render()};$("print").onclick=()=>window.print();
+  ["annee","solde0","taux"].forEach(id=>$(id).oninput=render);
   buildOps();render();
 })();
 </script>

@@ -1,15 +1,22 @@
 # Finance
 
-Application pédagogique sur les intérêts simples pour un compte d'épargne.
+Application pédagogique sur les intérêts simples pour un compte d’épargne.
 
 ## Interface web
 
-Ouvrir `index.html` dans un navigateur.
+Ouvrir `index.html` directement dans un navigateur. Une connexion internet n’est pas requise.
 
-## Programme Python
+## Application Streamlit
 
-```powershell
-python main.py
+```bash
+pip install -r requirements.txt
+streamlit run main.py
 ```
 
-Le programme demande l'année, le solde initial, le taux annuel et les versements ou retraits.
+## Fonctionnalités
+
+- Calcul d’intérêts simples
+- Méthode des quinzaines
+- Année commerciale de 360 jours
+- Montants en dinars tunisiens (TND)
+- Opérations limitées à l’année civile sélectionnée
