@@ -140,90 +140,86 @@ st.markdown(
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
       :root {
         color-scheme: light;
-        --ink: #20354a;
-        --muted: #718096;
-        --teal: #167c70;
-        --teal-dark: #11675e;
-        --canvas: #f2f0e9;
-        --surface: #faf9f5;
-        --line: #e4e0d5;
-        --gold: #c49a53;
-      }
-      /* Respect both the operating-system preference and Streamlit's selected theme. */
-      :root[data-theme="dark"], [data-theme="dark"] {
-        color-scheme: dark;
-        --ink: #f1f5f9;
-        --muted: #c1ccda;
-        --teal: #55c5b3;
-        --teal-dark: #3aa895;
-        --canvas: #111827;
-        --surface: #1f2937;
-        --line: #374151;
-        --gold: #e6c982;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          color-scheme: dark;
-          --ink: #f1f5f9;
-          --muted: #c1ccda;
-          --teal: #55c5b3;
-          --teal-dark: #3aa895;
-          --canvas: #111827;
-          --surface: #1f2937;
-          --line: #374151;
-          --gold: #e6c982;
-        }
+        --ink: #172033;
+        --muted: #667085;
+        --violet: #7357d9;
+        --violet-dark: #5b43b5;
+        --teal: #087e72;
+        --coral: #ef766a;
+        --gold: #d7a43b;
+        --canvas: #f7f4ed;
+        --surface: #ffffff;
+        --soft-violet: #eeeafd;
+        --soft-coral: #fff0ed;
+        --line: #e8e3d8;
       }
       html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-      .stApp, [data-testid="stAppViewContainer"] { background: var(--canvas); color: var(--ink); }
-      [data-testid="stHeader"] { background: var(--canvas); }
-      [data-testid="stSidebar"] { background: #20384b; border-right: 1px solid #304a5c; }
-      [data-testid="stSidebar"] * { color: #f2f0e9 !important; }
-      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #c2d0d5 !important; }
-      [data-testid="stSidebar"] hr { border-color: #496070; }
-      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #bdcbd0 !important; }
+      .stApp, [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #f8f6ef 0%, #f2f7f5 55%, #f7f1fa 100%);
+        color: var(--ink);
+      }
+      [data-testid="stHeader"] { background: rgba(248, 246, 239, .92); }
+      [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #faf8ff 0%, #eef8f5 100%);
+        border-right: 1px solid #ddd7ed;
+      }
+      [data-testid="stSidebar"] * { color: #26344d !important; }
+      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #5d6680 !important; }
+      [data-testid="stSidebar"] hr { border-color: #ddd7ed; }
+      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #737c91 !important; }
       h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -.035em; }
       .stMainBlockContainer { padding-top: 2rem; }
       .estimate-heading {
-        margin: 0 0 1rem; padding-left: .75rem; border-left: 4px solid var(--teal);
+        margin: 0 0 1rem; padding-left: .75rem; border-left: 4px solid var(--coral);
         font-size: 1.6rem; font-weight: 800; line-height: 1.25;
       }
       .hero {
         position: relative; overflow: hidden; padding: 1.8rem 2rem; border-radius: 20px;
-        margin: .15rem 0 1.7rem; color: #f7f5ef;
-        background: linear-gradient(118deg, #20384b 0%, #27665f 100%);
-        box-shadow: 0 14px 34px rgba(32, 56, 75, .13);
+        margin: .15rem 0 1.7rem; color: #ffffff;
+        background: linear-gradient(118deg, #7357d9 0%, #a85fc1 48%, #ef766a 100%);
+        box-shadow: 0 14px 34px rgba(115, 87, 217, .18);
         animation: page-enter .52s cubic-bezier(.2,.7,.25,1) both;
       }
       .hero:after {
         content: ''; position: absolute; width: 240px; height: 240px; border-radius: 50%;
-        right: -65px; top: -130px; border: 1px solid rgba(242,240,233,.17);
-        box-shadow: 0 0 0 24px rgba(242,240,233,.035), 0 0 0 50px rgba(242,240,233,.025);
+        right: -65px; top: -130px; border: 1px solid rgba(255,255,255,.35);
+        box-shadow: 0 0 0 24px rgba(255,255,255,.08), 0 0 0 50px rgba(255,255,255,.05);
       }
-      .hero h1 { color: #f7f5ef; margin: 0 0 .4rem; font-size: 2rem; }
-      .hero p { color: #d7e2dc; margin: 0; font-size: 1rem; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: var(--gold);
-                 font-weight: 700; font-size: .72rem; margin-bottom: .5rem; }
-      .section-card { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
-                      padding: 1.2rem 1.35rem; margin-bottom: 1rem; box-shadow: 0 5px 16px rgba(32,53,74,.035); }
-      [data-testid="stVerticalBlockBorderWrapper"] { background: var(--surface); border-radius: 16px; }
+      .hero h1 { color: #ffffff; margin: 0 0 .4rem; font-size: 2rem; }
+      .hero p { color: #fffaf5; margin: 0; font-size: 1rem; }
+      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #ffe0a0;
+                 font-weight: 800; font-size: .72rem; margin-bottom: .5rem; }
+      .section-card {
+        background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
+        padding: 1.2rem 1.35rem; margin-bottom: 1rem;
+        box-shadow: 0 7px 20px rgba(115, 87, 217, .07);
+      }
+      [data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+      }
       [data-testid="stMetric"] {
-        background: var(--surface); border: 1px solid var(--line); border-radius: 15px;
-        padding: 1.05rem 1.2rem; box-shadow: 0 5px 16px rgba(32,53,74,.035);
+        background: linear-gradient(145deg, #ffffff 0%, #f7f5ff 100%);
+        border: 1px solid #ddd6f5; border-radius: 15px;
+        padding: 1.05rem 1.2rem; box-shadow: 0 7px 20px rgba(115,87,217,.08);
         animation: metric-enter .55s ease both;
       }
-      [data-testid="stMetricLabel"] { color: var(--muted); font-weight: 600; }
-      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; }
-      div.stButton > button[kind="primary"] { background: var(--teal); border: 0; border-radius: 10px; }
-      div.stButton > button[kind="primary"]:hover { background: var(--teal-dark); }
-      div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input,
-      div[data-testid="stSelectbox"] [role="combobox"] {
-        color: var(--ink); background: var(--surface); border-radius: 9px;
+      [data-testid="stMetricLabel"] { color: #656d82; font-weight: 700; }
+      [data-testid="stMetricValue"] { color: var(--violet); font-family: 'Manrope', sans-serif; }
+      div.stButton > button[kind="primary"] {
+        background: var(--violet); border: 0; border-radius: 10px; color: #ffffff;
       }
-      [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"],
-      [data-testid="stCaptionContainer"] { color: var(--ink); }
+      div.stButton > button[kind="primary"]:hover { background: var(--violet-dark); }
+      div[data-testid="stNumberInput"] input,
+      div[data-testid="stDateInput"] input,
+      div[data-testid="stSelectbox"] [role="combobox"] {
+        color: var(--ink); background: #ffffff; border: 1px solid #dcd7e8; border-radius: 9px;
+      }
+      [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] { color: var(--ink); }
+      [data-testid="stCaptionContainer"] { color: var(--muted); }
       .small-note { color: var(--muted); font-size: .87rem; }
-      [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      [data-testid="stDataFrame"] {
+        border: 1px solid #dfd8f1; border-radius: 12px; overflow: hidden;
+      }
       @keyframes page-enter {
         from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
@@ -291,10 +287,7 @@ if page == "1 · Calcul d’intérêt":
             interest, final_capital, _ = simple_interest(
                 capital, annual_rate, duration, unit
             )
-            st.markdown(
-                "<h2 class='estimate-heading'>Votre estimation</h2>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("<h2 class='estimate-heading'>Votre estimation</h2>", unsafe_allow_html=True)
             st.metric("Intérêts générés", format_tnd(interest))
             st.metric("Capital final estimé", format_tnd(final_capital))
         else:
