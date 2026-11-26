@@ -17,24 +17,25 @@
     button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button.del{padding:8px 0;color:var(--danger)}
     .row-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:12px;color:var(--muted);font-weight:600}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}tfoot td{font-weight:700;border-bottom:0}
     .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.kpi{background:var(--soft);border-radius:10px;padding:12px}.kpi span{display:block;font-size:12px;color:var(--muted)}.kpi b{font-size:19px;font-variant-numeric:tabular-nums}.note{font-size:13px;color:var(--muted)}.warn{color:var(--danger)}
-    @media(max-width:640px){.op{grid-template-columns:1fr 1fr}.op .vdate{grid-column:1/2}}@media print{.noprint{display:none}body{background:#fff}.card{break-inside:avoid}.scroll{overflow:visible}table{font-size:11px}}
+    @media(max-width:640px){.op{grid-template-columns:1fr 1fr}.op .vdate{grid-column:1/2}}
+    @media print{.noprint{display:none}body{background:#fff;color:#111}.card{break-inside:avoid;border-color:#ccc}.scroll{overflow:visible}table{font-size:11px}}
   </style>
 </head>
 <body>
 <main>
   <h1>Compte d’épargne</h1>
-  <p class="sub">Relevé des opérations · Méthode des quinzaines · Capitalisation différée jusqu’à la prochaine opération après l’échéance choisie</p>
+  <p class="sub">Relevé des opérations · Méthode des quinzaines · Les intérêts ne sont capitalisés et affichés qu’après une opération postérieure à l’échéance choisie.</p>
   <section class="card noprint"><h2>Paramètres du compte</h2><div class="grid">
     <div><label for="annee">Année de simulation</label><input id="annee" type="number" value="2025" min="1900" max="2100" step="1"></div>
     <div><label for="solde0">Capital initial au 1er janvier (TND)</label><input id="solde0" type="number" value="0" min="0" step="0.001"></div>
     <div><label for="taux">Taux annuel (%)</label><input id="taux" type="number" value="3.5" step="0.01" min="0.01"></div>
     <div><label for="frequence">Période de capitalisation</label><select id="frequence"><option value="3">Trimestrielle – tous les 3 mois</option><option value="6">Semestrielle – tous les 6 mois</option></select></div>
   </div></section>
-  <section class="card noprint"><h2>Opérations</h2><div class="ops" id="ops"></div><div class="row-actions"><button class="primary" id="add">+ Ajouter une opération</button><button id="demo">Exemple</button><button id="clear">Tout effacer</button></div><p class="note" id="ignored"></p><p class="warn" id="error" role="alert"></p></section>
-  <section class="card"><h2>Résultat de la simulation</h2><div class="kpis" id="kpis"></div><p class="note" id="status"></p></section>
+  <section class="card noprint"><h2>Opérations</h2><div class="ops" id="ops"></div><div class="row-actions"><button class="primary" id="add" type="button">+ Ajouter une opération</button><button id="demo" type="button">Exemple</button><button id="clear" type="button">Tout effacer</button></div><p class="note" id="ignored"></p><p class="warn" id="error" role="alert"></p></section>
+  <section class="card"><h2>Résultat de la simulation</h2><div class="kpis" id="kpis"></div><p class="note" id="status" aria-live="polite"></p></section>
   <section class="card"><h2>Relevé du compte d’épargne</h2><div class="scroll"><table id="t-ops"></table></div></section>
-  <section class="card"><h2>Détail des intérêts courus</h2><div class="scroll"><table id="t-seg"></table></div><div class="row-actions noprint"><button id="print">Imprimer / PDF</button></div></section>
-  <p class="note">Les intérêts d’une période terminée restent en attente. Ils sont ajoutés au solde uniquement lorsqu’une opération survient après l’échéance de capitalisation. Les dates de valeur des versements et retraits suivent la règle des quinzaines.</p>
+  <section class="card"><h2>Détail des intérêts capitalisés</h2><div class="scroll"><table id="t-seg"></table></div><div class="row-actions noprint"><button id="print" type="button">Imprimer / PDF</button></div></section>
+  <p class="note">Les intérêts d’une période terminée restent en attente et ne sont pas affichés. Ils sont ajoutés au solde uniquement lorsqu’une opération survient après l’échéance de capitalisation. À la date exacte de l’échéance, ils restent en attente jusqu’à une opération ultérieure. Les dates de valeur des versements et retraits suivent la règle des quinzaines.</p>
 </main>
 <script>
 (function(){
@@ -46,12 +47,11 @@
   const key=a=>a.y*10000+a.m*100+a.d;
   const fmt=a=>String(a.d).padStart(2,"0")+"/"+String(a.m).padStart(2,"0")+"/"+a.y;
   const days360=(a,b)=>(b.y-a.y)*360+(b.m-a.m)*30+(Math.min(b.d,30)-Math.min(a.d,30));
-  const addMonths=(a,n)=>{const total=a.y*12+(a.m-1)+n,y=Math.floor(total/12),m=total%12+1;const last=new Date(y,m,0).getDate();return{y,m,d:Math.min(a.d,last)}};
+  const addMonths=(a,n)=>{const total=a.y*12+(a.m-1)+n,y=Math.floor(total/12),m=total%12+1,last=new Date(y,m,0).getDate();return{y,m,d:Math.min(a.d,last)}};
   const nextMonth=a=>addMonths(a,1);
   const valVersement=a=>a.d===1||a.d===16?a:a.d<16?{y:a.y,m:a.m,d:16}:nextMonth({...a,d:1});
   const valRetrait=a=>({y:a.y,m:a.m,d:a.d<=15?1:16});
   const nf3=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
-  const nf2=new Intl.NumberFormat("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
   const round3=n=>Math.round((n+Number.EPSILON)*1000)/1000;
 
   function compute(){
@@ -68,45 +68,56 @@
       valid.push({d,v:value,type:o.type,amount:round3(o.montant)*(o.type==="V"?1:-1)});
     }
     valid.sort((a,b)=>key(a.v)-key(b.v)||key(a.d)-key(b.d));
-    let balance=round3(initial),cursor=start,nextBoundary=addMonths(start,months),pending=0,credited=0,rows=[{operation:"Solde initial",opDate:fmt(start),valueDate:fmt(start),amount:balance,balance}],segments=[];
+    let balance=round3(initial),cursor=start,nextBoundary=addMonths(start,months),pending=0,credited=0,completedBoundary=false;
+    const rows=[{operation:"Solde initial",opDate:fmt(start),valueDate:fmt(start),amount:balance,balance}],segments=[],pendingSegments=[];
     const divisor=360/rate;
-    function accrue(until){const n=days360(cursor,until);if(n>0){const number=balance*n/100;pending+=number/divisor;segments.push({from:cursor,to:until,balance,days:n,interest:number/divisor});}cursor=until;}
+    function accrue(until){
+      const n=days360(cursor,until);
+      if(n>0){const number=balance*n/100,interest=number/divisor;pending+=interest;pendingSegments.push({from:cursor,to:until,balance,days:n,interest});}
+      cursor=until;
+    }
     for(const op of valid){
+      // Strictly later than the scheduled date: an operation on the boundary itself does not trigger capitalization.
       while(key(nextBoundary)<key(op.v)){
         accrue(nextBoundary);
+        completedBoundary=true;
         nextBoundary=addMonths(nextBoundary,months);
       }
-      // A completed period's interest is posted only when this later-dated transaction arrives.
-      if(key(cursor)>key(start)&&key(op.v)>key(cursor)&&pending>0){
+      // Post only interest accrued through completed periods. Interest in the current, incomplete period stays hidden.
+      if(completedBoundary&&key(op.v)>key(cursor)&&pending>0){
         const posted=round3(pending);
-        balance=round3(balance+posted);credited=round3(credited+posted);
+        balance=round3(balance+posted);
+        credited=round3(credited+posted);
         rows.push({operation:"Capitalisation des intérêts",opDate:"—",valueDate:fmt(op.v),amount:posted,balance});
+        segments.push(...pendingSegments);
         pending=0;
+        pendingSegments.length=0;
+        completedBoundary=false;
       }
       accrue(op.v);
       balance=round3(balance+op.amount);
       if(balance<0)return{error:"Le retrait du "+fmt(op.d)+" dépasse le solde disponible à sa date de valeur ("+fmt(op.v)+")."};
       rows.push({operation:op.type==="V"?"Versement":"Retrait",opDate:fmt(op.d),valueDate:fmt(op.v),amount:op.amount,balance});
     }
+    // Do not capitalize or expose untriggered interest at year end.
     accrue(end);
-    return{year,initial,rate,months,rows,segments,credited,pending:round3(pending),balance,ignored:Object.keys(ignored).length};
+    return{year,initial,rate,months,rows,segments,credited,balance,ignored:Object.keys(ignored).length};
   }
   function render(){
     const r=compute();
     if(r.error){$("error").textContent=r.error;$("kpis").innerHTML="";$("t-ops").innerHTML="";$("t-seg").innerHTML="";$("status").textContent="";$("ignored").textContent="";return;}
-    $("error").textContent="";$("ignored").textContent=r.ignored?"Les opérations hors de l’année sélectionnée sont exclues de la simulation.":"";
-    const accrued=round3(r.credited+r.pending);
-    $("kpis").innerHTML='<div class="kpi"><span>Intérêts totaux estimés</span><b>'+nf3.format(accrued)+' TND</b></div>'+
-      '<div class="kpi"><span>Intérêts déjà capitalisés</span><b>'+nf3.format(r.credited)+' TND</b></div>'+
-      '<div class="kpi"><span>Intérêts en attente</span><b>'+nf3.format(r.pending)+' TND</b></div>'+
+    $("error").textContent="";
+    $("ignored").textContent=r.ignored?"Les opérations hors de l’année sélectionnée sont exclues de la simulation.":"";
+    $("kpis").innerHTML='<div class="kpi"><span>Intérêts capitalisés</span><b>'+nf3.format(r.credited)+' TND</b></div>'+
+      '<div class="kpi"><span>Intérêts non affichés</span><b>En attente</b></div>'+
       '<div class="kpi"><span>Solde après capitalisations</span><b>'+nf3.format(r.balance)+' TND</b></div>';
-    $("status").textContent=r.pending>0?"Les intérêts en attente seront ajoutés au solde à la prochaine opération dont la date de valeur suit une échéance de capitalisation.":"Aucun intérêt n’est actuellement en attente de capitalisation.";
+    $("status").textContent="Les intérêts en attente ne sont pas affichés. Ils seront capitalisés après une opération dont la date de valeur est postérieure à une échéance de capitalisation.";
     let h='<thead><tr><th>Date d’opération</th><th>Date de valeur</th><th>Mouvement</th><th>Montant (TND)</th><th>Solde après mouvement (TND)</th></tr></thead><tbody>';
     r.rows.forEach(x=>h+='<tr><td>'+x.opDate+'</td><td>'+x.valueDate+'</td><td>'+x.operation+'</td><td>'+nf3.format(x.amount)+'</td><td>'+nf3.format(x.balance)+'</td></tr>');
     $("t-ops").innerHTML=h+'</tbody>';
-    let s='<thead><tr><th>Du</th><th>Au</th><th>Solde de calcul (TND)</th><th>Jours 30/360</th><th>Intérêts courus (TND)</th></tr></thead><tbody>';
+    let s='<thead><tr><th>Du</th><th>Au</th><th>Solde de calcul (TND)</th><th>Jours 30/360</th><th>Intérêts capitalisés (TND)</th></tr></thead><tbody>';
     r.segments.forEach(x=>s+='<tr><td>'+fmt(x.from)+'</td><td>'+fmt(x.to)+'</td><td>'+nf3.format(x.balance)+'</td><td>'+x.days+'</td><td>'+nf3.format(x.interest)+'</td></tr>');
-    s+='</tbody><tfoot><tr><td colspan="4">Total des intérêts estimés</td><td>'+nf3.format(accrued)+'</td></tr></tfoot>';
+    s+='</tbody><tfoot><tr><td colspan="4">Total des intérêts capitalisés</td><td>'+nf3.format(r.credited)+'</td></tr></tfoot>';
     $("t-seg").innerHTML=s;
   }
   function label(o){if(!o.date)return"";const d=parse(o.date);return"Date de valeur : "+fmt(o.type==="V"?valVersement(d):valRetrait(d));}
