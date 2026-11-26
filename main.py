@@ -63,7 +63,7 @@ def days_360(start, end):
     )
 
 
-def calculate_savings(initial_balance, annual_rate, operations, opening_date):
+def calculate_savings(initial_balance, annual_rate, operations, opening_date, frequency_months):
     balance = money(initial_balance)
     rate = Decimal(str(annual_rate))
 
@@ -71,8 +71,9 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date):
         raise ValueError("Le capital initial ne peut pas être négatif.")
     if rate <= 0:
         raise ValueError("Le taux annuel doit être supérieur à zéro.")
+    if frequency_months not in (3, 6):
+        raise ValueError("Choisissez une capitalisation trimestrielle ou semestrielle.")
 
-    frequency_months = 3
     end = add_months(opening_date, 12)
     valued_operations = []
 
@@ -93,20 +94,33 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date):
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
     divisor = Decimal("360") / rate
     segments = []
-    capitalizations = []
+    statement_rows = [{
+        "Date d’opération": opening_date.strftime("%d/%m/%Y"),
+        "Date de valeur": opening_date.strftime("%d/%m/%Y"),
+        "Mouvement": "Ouverture du compte",
+        "Montant (TND)": float(balance),
+        "Solde après mouvement (TND)": float(balance),
+    }]
     operation_index = 0
     period_start = opening_date
     total_interest = Decimal("0")
 
     def apply_operation(operation):
         nonlocal balance
-        effective_date, operation_date, _, signed_amount = operation
+        effective_date, operation_date, operation_type, signed_amount = operation
         balance = money(balance + signed_amount)
         if balance < 0:
             raise ValueError(
                 f"Le retrait du {operation_date.strftime('%d/%m/%Y')} dépasse le solde disponible "
                 f"à sa date de valeur ({effective_date.strftime('%d/%m/%Y')})."
             )
+        statement_rows.append({
+            "Date d’opération": operation_date.strftime("%d/%m/%Y"),
+            "Date de valeur": effective_date.strftime("%d/%m/%Y"),
+            "Mouvement": operation_type,
+            "Montant (TND)": float(signed_amount),
+            "Solde après mouvement (TND)": float(balance),
+        })
 
     while period_start < end:
         elapsed_months = (
@@ -114,11 +128,14 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date):
             + period_start.month - opening_date.month
         )
         period_end = min(
-            add_months(opening_date, elapsed_months // frequency_months * frequency_months + frequency_months),
+            add_months(
+                opening_date,
+                elapsed_months // frequency_months * frequency_months + frequency_months,
+            ),
             end,
         )
 
-        # Apply transactions effective on the first day before interest accrues.
+        # Transactions valued at the period start are included before interest accrues.
         while operation_index < len(valued_operations) and valued_operations[operation_index][0] <= period_start:
             apply_operation(valued_operations[operation_index])
             operation_index += 1
@@ -149,7 +166,13 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date):
         credited_interest = money(period_numbers / divisor)
         balance = money(balance + credited_interest)
         total_interest += credited_interest
-        capitalizations.append((period_end, credited_interest, balance))
+        statement_rows.append({
+            "Date d’opération": "—",
+            "Date de valeur": period_end.strftime("%d/%m/%Y"),
+            "Mouvement": "Capitalisation des intérêts",
+            "Montant (TND)": float(credited_interest),
+            "Solde après mouvement (TND)": float(balance),
+        })
         period_start = period_end
 
     return {
@@ -157,7 +180,7 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date):
         "interest": money(total_interest),
         "capital": balance,
         "segments": segments,
-        "capitalizations": capitalizations,
+        "statement": statement_rows,
         "end_date": end,
     }
 
@@ -281,7 +304,7 @@ else:
     st.markdown(
         "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Suivez vos versements et retraits, avec des intérêts capitalisés chaque trimestre.</p></div>",
+        "<p>Suivez vos versements et retraits, avec des intérêts capitalisés selon la période choisie.</p></div>",
         unsafe_allow_html=True,
     )
 
@@ -289,10 +312,15 @@ else:
     opening_date = c1.date_input("Date d’ouverture du compte", value=date.today())
     initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
     rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
+    frequency_label = st.selectbox(
+        "Période de capitalisation",
+        ["Trimestrielle (tous les 3 mois)", "Semestrielle (tous les 6 mois)"],
+    )
+    frequency_months = 3 if frequency_label.startswith("Trimestrielle") else 6
     projection_end = add_months(opening_date, 12)
     st.caption(
         f"Projection du {opening_date.strftime('%d/%m/%Y')} au {projection_end.strftime('%d/%m/%Y')}. "
-        "Les intérêts sont ajoutés au solde tous les trois mois."
+        f"Les intérêts sont ajoutés au solde {frequency_label.lower()}."
     )
 
     st.markdown("### Opérations du compte")
@@ -312,7 +340,7 @@ else:
     if operation_count == 0:
         st.markdown(
             "<div class='section-card'><b>Aucune opération pour le moment</b><br>"
-            "<span class='small-note'>Ajoutez un versement ou un retrait pour l’inclure dans la projection.</span></div>",
+            "<span class='small-note'>Ajoutez un versement ou un retrait pour l’inclure dans le tableau du compte.</span></div>",
             unsafe_allow_html=True,
         )
 
@@ -344,21 +372,15 @@ else:
             operations.append((operation_date, operation_type, amount))
 
     try:
-        result = calculate_savings(initial, rate, operations, opening_date)
+        result = calculate_savings(initial, rate, operations, opening_date, frequency_months)
         st.markdown("### Synthèse après un an")
         m1, m2, m3 = st.columns(3)
         m1.metric("Capital initial", format_tnd(initial))
         m2.metric("Intérêts capitalisés", format_tnd(result["interest"]))
         m3.metric("Capital acquis", format_tnd(result["capital"]))
 
-        st.markdown("### Échéances de capitalisation trimestrielle")
-        capitalization_rows = [{
-            "Échéance": when.strftime('%d/%m/%Y'),
-            "Intérêts ajoutés (TND)": float(amount),
-            "Solde après capitalisation (TND)": float(balance),
-        } for when, amount, balance in result["capitalizations"]]
-        if capitalization_rows:
-            st.dataframe(capitalization_rows, use_container_width=True, hide_index=True)
+        st.markdown("### Tableau du compte d’épargne")
+        st.dataframe(result["statement"], use_container_width=True, hide_index=True)
 
         with st.expander("Voir le détail du calcul des intérêts"):
             rows = [{
@@ -373,9 +395,11 @@ else:
 
         with st.expander("Comprendre la méthode"):
             st.write(
-                "Les versements prennent effet le 1er ou le 16 du mois selon leur date d’opération. "
-                "Les retraits sont pris en compte au début de la quinzaine correspondante. Les intérêts sont "
-                "calculés sur une année commerciale de 360 jours et ajoutés au solde tous les trois mois."
+                "Le tableau présente le capital à l’ouverture, chaque versement ou retrait avec sa date d’opération "
+                "et sa date de valeur, ainsi que chaque capitalisation des intérêts. Les versements prennent effet "
+                "le 1er ou le 16 du mois selon leur date d’opération ; les retraits prennent effet au début de la "
+                "quinzaine correspondante. Les intérêts sont calculés selon une année commerciale de 360 jours, "
+                f"puis ajoutés au solde à chaque échéance {frequency_label.lower()}."
             )
 
     except ValueError as error:
