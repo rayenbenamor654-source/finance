@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from calendar import monthrange
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 import streamlit as st
@@ -33,8 +34,19 @@ def simple_interest(capital, annual_rate_percent, duration, unit):
     return interest, money(capital + interest), year_fraction
 
 
+def add_months(value, months):
+    """Add calendar months while keeping the day when possible."""
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, monthrange(year, month)[1])
+    return date(year, month, day)
+
+
 def value_date(operation_date, operation_type):
     """Apply the requested +/- 7-day value date to a savings operation."""
+    from datetime import timedelta
+
     if operation_type == "Versement":
         return operation_date + timedelta(days=7)
     if operation_type == "Retrait":
@@ -42,84 +54,66 @@ def value_date(operation_date, operation_type):
     raise ValueError("Type d'opération invalide.")
 
 
-def days_360(start, end):
-    """Return the number of days using a 30/360 commercial calendar."""
-    return (
-        (end.year - start.year) * 360
-        + (end.month - start.month) * 30
-        + min(end.day, 30)
-        - min(start.day, 30)
-    )
-
-
-def calculate_savings(initial_balance, annual_rate, operations, year):
-    """Estimate annual simple interest using the operation value dates."""
+def build_ledger(initial_balance, operations, start_date, annual_rate, capitalization_months):
+    """Build the account ledger, posting compound interest at each due date."""
     balance = Decimal(str(initial_balance))
-    rate = Decimal(str(annual_rate))
-    start, end = date(year, 1, 1), date(year + 1, 1, 1)
-    valued_operations, segments = [], []
+    annual_rate = Decimal(str(annual_rate)) / Decimal("100")
+    periods_per_year = Decimal("12") / Decimal(str(capitalization_months))
+    periodic_rate = annual_rate / periods_per_year
 
-    for operation_date, operation_type, amount, *_ in operations:
+    transaction_events = []
+    for index, (operation_date, operation_type, description, amount) in enumerate(operations):
         amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValueError("Le montant d'une opération doit être supérieur à zéro.")
+        effective_date = max(value_date(operation_date, operation_type), start_date)
         signed_amount = amount if operation_type == "Versement" else -amount
-        valued_operations.append(
-            (value_date(operation_date, operation_type), operation_date, operation_type, signed_amount)
+        transaction_events.append(
+            (effective_date, 1, index, operation_date, operation_type, description, amount, signed_amount)
         )
 
-    valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
-    segment_start = start
-    for value, operation_date, _, signed_amount in valued_operations:
-        value = max(value, start)
-        if value >= end:
+    last_event_date = max((event[0] for event in transaction_events), default=start_date)
+    events = list(transaction_events)
+    capitalization_date = add_months(start_date, capitalization_months)
+    period_number = 1
+    while capitalization_date <= last_event_date:
+        events.append((capitalization_date, 0, period_number, capitalization_date))
+        period_number += 1
+        capitalization_date = add_months(start_date, capitalization_months * period_number)
+
+    events.sort(key=lambda event: (event[0], event[1], event[2]))
+    rows = [{
+        "Date d’opération": start_date.strftime("%d/%m/%Y"),
+        "Date de valeur": start_date.strftime("%d/%m/%Y"),
+        "Description": "Ouverture du compte",
+        "Type": "Ouverture",
+        "Montant (TND)": format_tnd(balance),
+        "Solde (TND)": format_tnd(balance),
+    }]
+
+    for event in events:
+        if event[1] == 0:
+            date_of_credit = event[0]
+            interest = money(balance * periodic_rate)
+            balance = money(balance + interest)
+            rows.append({
+                "Date d’opération": date_of_credit.strftime("%d/%m/%Y"),
+                "Date de valeur": date_of_credit.strftime("%d/%m/%Y"),
+                "Description": f"Intérêts capitalisés ({capitalization_months} mois)",
+                "Type": "Intérêt",
+                "Montant (TND)": format_tnd(interest),
+                "Solde (TND)": format_tnd(balance),
+            })
             continue
-        days = days_360(segment_start, value)
-        if days > 0:
-            number = balance * Decimal(days) / Decimal("100")
-            segments.append((segment_start, value, balance, days, number))
-        balance += signed_amount
-        if balance < 0:
-            raise ValueError(
-                f"Le retrait du {operation_date.strftime('%d/%m/%Y')} dépasse le solde disponible."
-            )
-        segment_start = value
 
-    days = days_360(segment_start, end)
-    if days > 0:
-        number = balance * Decimal(days) / Decimal("100")
-        segments.append((segment_start, end, balance, days, number))
-
-    total_numbers = sum((segment[4] for segment in segments), Decimal("0"))
-    if rate <= 0:
-        raise ValueError("Le taux annuel doit être supérieur à zéro.")
-    divisor = Decimal("360") / rate
-    interest = money(total_numbers / divisor)
-    return {
-        "balance": balance,
-        "interest": interest,
-        "capital": money(balance + interest),
-        "total_numbers": total_numbers,
-        "divisor": divisor,
-        "segments": segments,
-    }
-
-
-def build_ledger(initial_balance, operations):
-    """Build chronological rows and reject transactions that overdraw the account."""
-    balance = Decimal(str(initial_balance))
-    rows = []
-    ordered_operations = sorted(
-        enumerate(operations), key=lambda entry: (entry[1][0], entry[0])
-    )
-    for _, (operation_date, operation_type, description, amount) in ordered_operations:
-        amount = Decimal(str(amount))
-        signed_amount = amount if operation_type == "Versement" else -amount
+        _, _, _, operation_date, operation_type, description, amount, signed_amount = event
         next_balance = balance + signed_amount
         if next_balance < 0:
             raise ValueError(
                 f"Retrait refusé le {operation_date.strftime('%d/%m/%Y')} : "
                 f"solde disponible {format_tnd(balance)}, retrait demandé {format_tnd(amount)}."
             )
-        balance = next_balance
+        balance = money(next_balance)
         rows.append({
             "Date d’opération": operation_date.strftime("%d/%m/%Y"),
             "Date de valeur": value_date(operation_date, operation_type).strftime("%d/%m/%Y"),
@@ -128,6 +122,7 @@ def build_ledger(initial_balance, operations):
             "Montant (TND)": format_tnd(amount),
             "Solde (TND)": format_tnd(balance),
         })
+
     return rows, balance
 
 
@@ -245,7 +240,7 @@ else:
     st.markdown(
         "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Suivez les opérations de votre compte et le solde disponible.</p></div>",
+        "<p>Suivez les opérations, les intérêts capitalisés et le solde disponible.</p></div>",
         unsafe_allow_html=True,
     )
 
@@ -257,7 +252,7 @@ else:
             c1, c2, c3, c4 = st.columns(4)
             start_date = c1.date_input("Date de début", value=date.today())
             initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
-            annual_rate = c3.number_input("Taux d’intérêt (%)", min_value=0.0, value=5.0, step=0.25)
+            annual_rate = c3.number_input("Taux d’intérêt annuel (%)", min_value=0.0, value=5.0, step=0.25)
             capitalization_duration = c4.selectbox(
                 "Durée de capitalisation", ["3 mois", "6 mois", "1 an"]
             )
@@ -281,6 +276,7 @@ else:
     initial = account["initial"]
     annual_rate = account["rate"]
     operations = st.session_state.get(operations_key, [])
+    capitalization_months = {"3 mois": 3, "6 mois": 6, "1 an": 12}[account["capitalization_duration"]]
 
     st.markdown("### Vue d’ensemble du compte")
     info1, info2, info3, info4 = st.columns(4)
@@ -299,9 +295,7 @@ else:
     with st.form("savings_operation_form", clear_on_submit=True):
         op1, op2, op3, op4 = st.columns([1, 1, 1.5, 1])
         operation_date = op1.date_input(
-            "Date d’opération",
-            value=max(start_date, date.today()),
-            min_value=start_date,
+            "Date d’opération", value=max(start_date, date.today()), min_value=start_date,
             key="savings_operation_date",
         )
         operation_type = op2.selectbox("Type", ["Versement", "Retrait"])
@@ -313,10 +307,9 @@ else:
         if not description.strip():
             st.error("Veuillez saisir une description pour l’opération.")
         else:
-            new_operation = (operation_date, operation_type, description.strip(), amount)
-            candidate_operations = operations + [new_operation]
+            candidate_operations = operations + [(operation_date, operation_type, description.strip(), amount)]
             try:
-                build_ledger(initial, candidate_operations)
+                build_ledger(initial, candidate_operations, start_date, annual_rate, capitalization_months)
                 st.session_state[operations_key] = candidate_operations
                 st.success("Opération ajoutée au compte.")
                 st.rerun()
@@ -324,41 +317,15 @@ else:
                 st.error(str(error))
 
     try:
-        ledger_rows, current_balance = build_ledger(initial, operations)
+        ledger_rows, current_balance = build_ledger(
+            initial, operations, start_date, annual_rate, capitalization_months
+        )
         st.markdown("### Historique du compte")
         st.metric("Solde disponible", format_tnd(current_balance))
-        if ledger_rows:
-            st.dataframe(ledger_rows, use_container_width=True, hide_index=True)
-        else:
-            st.info("Aucune opération pour le moment. Le solde initial est de " + format_tnd(initial) + ".")
-
-        st.markdown("### Synthèse annuelle des intérêts")
-        year = start_date.year
-        interest_operations = [
-            (op_date, op_type, amount, description)
-            for op_date, op_type, description, amount in operations
-        ]
-        result = calculate_savings(initial, annual_rate, interest_operations, year)
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Solde hors intérêts", format_tnd(result["balance"]))
-        m2.metric("Intérêts estimés", format_tnd(result["interest"]))
-        m3.metric("Capital acquis", format_tnd(result["capital"]))
-
-        st.markdown("### Détail du calcul des intérêts")
-        rows = [
-            {
-                "Du": start.strftime("%d/%m/%Y"),
-                "Au": end.strftime("%d/%m/%Y"),
-                "Solde (TND)": float(money(balance)),
-                "Jours (30/360)": days,
-                "Nombres": float(money(number)),
-            }
-            for start, end, balance, days, number in result["segments"]
-        ]
-        if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
-        summary1, summary2 = st.columns(2)
-        summary1.markdown(f"**Total des nombres :** {money(result['total_numbers']):,.2f}")
-        summary2.markdown(f"**Diviseur :** {result['divisor']:,.4f}")
+        st.caption(
+            f"Les intérêts sont crédités automatiquement tous les {capitalization_months} mois. "
+            "Les opérations enregistrées après une échéance incluent les intérêts déjà capitalisés."
+        )
+        st.dataframe(ledger_rows, use_container_width=True, hide_index=True)
     except ValueError as error:
         st.error(str(error))
