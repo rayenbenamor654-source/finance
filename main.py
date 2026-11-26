@@ -23,6 +23,8 @@ def simple_interest(capital, annual_rate_percent, duration, unit):
     capital = Decimal(str(capital))
     rate = Decimal(str(annual_rate_percent)) / Decimal("100")
     duration = Decimal(str(duration))
+    if unit == "Jours" and duration != duration.to_integral_value():
+        raise ValueError("La durée en jours doit être un nombre entier.")
     year_fraction = {
         "Années": duration,
         "Mois": duration / Decimal("12"),
@@ -137,6 +139,7 @@ st.markdown(
     <style>
       @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
       :root {
+        color-scheme: light;
         --ink: #20354a;
         --muted: #718096;
         --teal: #167c70;
@@ -146,9 +149,34 @@ st.markdown(
         --line: #e4e0d5;
         --gold: #c49a53;
       }
+      /* Respect both the operating-system preference and Streamlit's selected theme. */
+      :root[data-theme="dark"], [data-theme="dark"] {
+        color-scheme: dark;
+        --ink: #f1f5f9;
+        --muted: #c1ccda;
+        --teal: #55c5b3;
+        --teal-dark: #3aa895;
+        --canvas: #111827;
+        --surface: #1f2937;
+        --line: #374151;
+        --gold: #e6c982;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --ink: #f1f5f9;
+          --muted: #c1ccda;
+          --teal: #55c5b3;
+          --teal-dark: #3aa895;
+          --canvas: #111827;
+          --surface: #1f2937;
+          --line: #374151;
+          --gold: #e6c982;
+        }
+      }
       html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-      .stApp { background: var(--canvas); color: var(--ink); }
-      [data-testid="stHeader"] { background: rgba(242, 240, 233, .92); }
+      .stApp, [data-testid="stAppViewContainer"] { background: var(--canvas); color: var(--ink); }
+      [data-testid="stHeader"] { background: var(--canvas); }
       [data-testid="stSidebar"] { background: #20384b; border-right: 1px solid #304a5c; }
       [data-testid="stSidebar"] * { color: #f2f0e9 !important; }
       [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #c2d0d5 !important; }
@@ -174,9 +202,9 @@ st.markdown(
       }
       .hero h1 { color: #f7f5ef; margin: 0 0 .4rem; font-size: 2rem; }
       .hero p { color: #d7e2dc; margin: 0; font-size: 1rem; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #d8bd83;
+      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: var(--gold);
                  font-weight: 700; font-size: .72rem; margin-bottom: .5rem; }
-      .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+      .section-card { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
                       padding: 1.2rem 1.35rem; margin-bottom: 1rem; box-shadow: 0 5px 16px rgba(32,53,74,.035); }
       [data-testid="stVerticalBlockBorderWrapper"] { background: var(--surface); border-radius: 16px; }
       [data-testid="stMetric"] {
@@ -188,7 +216,12 @@ st.markdown(
       [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; }
       div.stButton > button[kind="primary"] { background: var(--teal); border: 0; border-radius: 10px; }
       div.stButton > button[kind="primary"]:hover { background: var(--teal-dark); }
-      div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input { border-radius: 9px; }
+      div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input,
+      div[data-testid="stSelectbox"] [role="combobox"] {
+        color: var(--ink); background: var(--surface); border-radius: 9px;
+      }
+      [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"],
+      [data-testid="stCaptionContainer"] { color: var(--ink); }
       .small-note { color: var(--muted); font-size: .87rem; }
       [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
       @keyframes page-enter {
@@ -239,8 +272,15 @@ if page == "1 · Calcul d’intérêt":
             capital = c1.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
             annual_rate = c2.number_input("Taux annuel (%)", min_value=0.0, value=5.0, step=0.25)
             c3, c4 = st.columns(2)
-            duration = c3.number_input("Durée", min_value=0.0, value=2.0, step=0.5)
             unit = c4.selectbox("Unité de durée", ["Années", "Mois", "Jours"])
+            if unit == "Jours":
+                duration = c3.number_input(
+                    "Durée", min_value=0, value=2, step=1, format="%d", key="duration_days"
+                )
+            else:
+                duration = c3.number_input(
+                    "Durée", min_value=0.0, value=2.0, step=0.5, key=f"duration_{unit}"
+                )
             st.markdown(
                 "<p class='small-note'>Base de calcul : année commerciale de 360 jours pour une durée en jours.</p>",
                 unsafe_allow_html=True,
