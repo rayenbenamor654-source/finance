@@ -94,6 +94,7 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
     divisor = Decimal("360") / rate
     segments = []
+    pending_segments = []
     statement_rows = [{
         "Date d’opération": opening_date.strftime("%d/%m/%Y"),
         "Date de valeur": opening_date.strftime("%d/%m/%Y"),
@@ -101,9 +102,21 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
         "Montant (TND)": float(balance),
         "Solde après mouvement (TND)": float(balance),
     }]
-    operation_index = 0
-    period_start = opening_date
+    cursor = opening_date
+    next_boundary = add_months(opening_date, frequency_months)
+    pending_interest = Decimal("0")
     total_interest = Decimal("0")
+    boundary_passed = False
+
+    def accrue(until):
+        nonlocal pending_interest, cursor
+        days = days_360(cursor, until)
+        if days > 0:
+            number = balance * Decimal(days) / Decimal("100")
+            interest = number / divisor
+            pending_interest += interest
+            pending_segments.append((cursor, until, balance, days, number))
+        cursor = until
 
     def apply_operation(operation):
         nonlocal balance
@@ -122,58 +135,45 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
             "Solde après mouvement (TND)": float(balance),
         })
 
-    while period_start < end:
-        elapsed_months = (
-            (period_start.year - opening_date.year) * 12
-            + period_start.month - opening_date.month
-        )
-        period_end = min(
-            add_months(
+    for operation in valued_operations:
+        effective_date = operation[0]
+
+        # Interest stays pending at each capitalization date. It is posted only
+        # when a transaction has a value date strictly after that date.
+        while next_boundary < effective_date:
+            accrue(next_boundary)
+            boundary_passed = True
+            elapsed_months = (
+                (next_boundary.year - opening_date.year) * 12
+                + next_boundary.month - opening_date.month
+            )
+            next_boundary = add_months(
                 opening_date,
-                elapsed_months // frequency_months * frequency_months + frequency_months,
-            ),
-            end,
-        )
+                (elapsed_months // frequency_months + 1) * frequency_months,
+            )
 
-        # Transactions valued at the period start are included before interest accrues.
-        while operation_index < len(valued_operations) and valued_operations[operation_index][0] <= period_start:
-            apply_operation(valued_operations[operation_index])
-            operation_index += 1
+        if boundary_passed and effective_date > cursor and pending_interest > 0:
+            credited_interest = money(pending_interest)
+            balance = money(balance + credited_interest)
+            total_interest += credited_interest
+            statement_rows.append({
+                "Date d’opération": "—",
+                "Date de valeur": effective_date.strftime("%d/%m/%Y"),
+                "Mouvement": "Capitalisation des intérêts",
+                "Montant (TND)": float(credited_interest),
+                "Solde après mouvement (TND)": float(balance),
+            })
+            segments.extend(pending_segments)
+            pending_segments.clear()
+            pending_interest = Decimal("0")
+            boundary_passed = False
 
-        segment_start = period_start
-        period_numbers = Decimal("0")
+        accrue(effective_date)
+        apply_operation(operation)
 
-        while operation_index < len(valued_operations) and valued_operations[operation_index][0] < period_end:
-            operation = valued_operations[operation_index]
-            effective_date = operation[0]
-            days = days_360(segment_start, effective_date)
-
-            if days > 0:
-                number = balance * Decimal(days) / Decimal("100")
-                segments.append((segment_start, effective_date, balance, days, number))
-                period_numbers += number
-
-            segment_start = effective_date
-            apply_operation(operation)
-            operation_index += 1
-
-        days = days_360(segment_start, period_end)
-        if days > 0:
-            number = balance * Decimal(days) / Decimal("100")
-            segments.append((segment_start, period_end, balance, days, number))
-            period_numbers += number
-
-        credited_interest = money(period_numbers / divisor)
-        balance = money(balance + credited_interest)
-        total_interest += credited_interest
-        statement_rows.append({
-            "Date d’opération": "—",
-            "Date de valeur": period_end.strftime("%d/%m/%Y"),
-            "Mouvement": "Capitalisation des intérêts",
-            "Montant (TND)": float(credited_interest),
-            "Solde après mouvement (TND)": float(balance),
-        })
-        period_start = period_end
+    # Accrue the remainder of the projection, but do not display or post it:
+    # there has not yet been an operation after a capitalization date.
+    accrue(end)
 
     return {
         "balance": balance,
@@ -320,7 +320,7 @@ else:
     projection_end = add_months(opening_date, 12)
     st.caption(
         f"Projection du {opening_date.strftime('%d/%m/%Y')} au {projection_end.strftime('%d/%m/%Y')}. "
-        f"Les intérêts sont ajoutés au solde {frequency_label.lower()}."
+        f"Les intérêts sont ajoutés au solde {frequency_label.lower()} après une opération postérieure à l’échéance."
     )
 
     st.markdown("### Opérations du compte")
@@ -392,14 +392,16 @@ else:
             } for start, end, balance, days, number in result["segments"]]
             if rows:
                 st.dataframe(rows, use_container_width=True, hide_index=True)
+            else:
+                st.caption("Aucun intérêt n’a encore été capitalisé. Il apparaîtra après une opération dont la date de valeur est postérieure à une échéance.")
 
         with st.expander("Comprendre la méthode"):
             st.write(
                 "Le tableau présente le capital à l’ouverture, chaque versement ou retrait avec sa date d’opération "
-                "et sa date de valeur, ainsi que chaque capitalisation des intérêts. Les versements prennent effet "
-                "le 1er ou le 16 du mois selon leur date d’opération ; les retraits prennent effet au début de la "
-                "quinzaine correspondante. Les intérêts sont calculés selon une année commerciale de 360 jours, "
-                f"puis ajoutés au solde à chaque échéance {frequency_label.lower()}."
+                "et sa date de valeur, ainsi que les intérêts capitalisés lorsqu’une opération survient après une échéance. "
+                "Les versements prennent effet le 1er ou le 16 du mois selon leur date d’opération ; les retraits prennent "
+                "effet au début de la quinzaine correspondante. Les intérêts sont calculés selon une année commerciale "
+                "de 360 jours, puis ajoutés au solde à chaque échéance {frequency_label.lower()} après cette opération."
             )
 
     except ValueError as error:
