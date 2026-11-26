@@ -89,7 +89,7 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
             continue
 
         signed_amount = amount if operation_type == "Versement" else -amount
-        valued_operations.append((effective_date, operation_date, operation_type, signed_amount))
+        valued_operations.append((effectiveive_date if False else effective_date, operation_date, operation_type, signed_amount))
 
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
     divisor = Decimal("360") / rate
@@ -323,53 +323,35 @@ else:
         f"Les intérêts sont ajoutés au solde {frequency_label.lower()} après une opération postérieure à l’échéance."
     )
 
-    st.markdown("### Opérations du compte")
-    if "savings_operation_count" not in st.session_state:
-        st.session_state.savings_operation_count = 0
+    if "savings_operations" not in st.session_state:
+        st.session_state.savings_operations = []
 
-    operation_count = st.session_state.savings_operation_count
-    add_col, remove_col, _ = st.columns([1.2, 1.2, 3])
-    if add_col.button("＋ Ajouter une opération", type="primary", use_container_width=True):
-        st.session_state.savings_operation_count += 1
-        st.rerun()
-    if remove_col.button("− Supprimer la dernière", disabled=operation_count == 0, use_container_width=True):
-        st.session_state.savings_operation_count = max(0, operation_count - 1)
-        st.rerun()
+    st.markdown("### Ajouter une opération")
+    with st.form("savings_operation_form", clear_on_submit=True):
+        operation_cols = st.columns([1.2, 1, 1])
+        operation_date = operation_cols[0].date_input(
+            "Date de l’opération",
+            value=opening_date,
+            min_value=opening_date,
+            max_value=projection_end,
+        )
+        operation_type = operation_cols[1].selectbox("Type d’opération", ["Versement", "Retrait"])
+        amount = operation_cols[2].number_input(
+            "Montant (TND)", min_value=0.001, value=100.0, step=50.0
+        )
+        submitted = st.form_submit_button("＋ Ajouter au tableau", type="primary")
 
-    operations = []
-    if operation_count == 0:
+    if submitted:
+        st.session_state.savings_operations.append((operation_date, operation_type, amount))
+        st.success("Opération ajoutée au tableau du compte.")
+
+    operations = st.session_state.savings_operations
+    if not operations:
         st.markdown(
             "<div class='section-card'><b>Aucune opération pour le moment</b><br>"
-            "<span class='small-note'>Ajoutez un versement ou un retrait pour l’inclure dans le tableau du compte.</span></div>",
+            "<span class='small-note'>Renseignez une date, un type et un montant, puis ajoutez l’opération au tableau.</span></div>",
             unsafe_allow_html=True,
         )
-
-    for index in range(operation_count):
-        with st.container(border=True):
-            st.markdown(f"**Opération {index + 1:02d}**")
-            cols = st.columns([1.2, 1, 1, 0.8])
-            operation_date = cols[0].date_input(
-                "Date de l’opération",
-                value=opening_date,
-                min_value=opening_date,
-                max_value=projection_end,
-                key=f"savings_date_{index}",
-            )
-            operation_type = cols[1].selectbox(
-                "Type d’opération",
-                ["Versement", "Retrait"],
-                key=f"savings_type_{index}",
-            )
-            amount = cols[2].number_input(
-                "Montant (TND)",
-                min_value=0.001,
-                value=100.0,
-                step=50.0,
-                key=f"savings_amount_{index}",
-            )
-            effective_date = max(value_date(operation_date, operation_type), opening_date)
-            cols[3].caption(f"Date valeur : {effective_date.strftime('%d/%m/%Y')}")
-            operations.append((operation_date, operation_type, amount))
 
     try:
         result = calculate_savings(initial, rate, operations, opening_date, frequency_months)
@@ -401,7 +383,7 @@ else:
                 "et sa date de valeur, ainsi que les intérêts capitalisés lorsqu’une opération survient après une échéance. "
                 "Les versements prennent effet le 1er ou le 16 du mois selon leur date d’opération ; les retraits prennent "
                 "effet au début de la quinzaine correspondante. Les intérêts sont calculés selon une année commerciale "
-                "de 360 jours, puis ajoutés au solde à chaque échéance {frequency_label.lower()} après cette opération."
+                f"de 360 jours, puis ajoutés au solde à chaque échéance {frequency_label.lower()} après cette opération."
             )
 
     except ValueError as error:
