@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -29,10 +30,12 @@ def simple_interest(capital, annual_rate_percent, duration, unit):
     return interest, money(capital + interest), year_fraction
 
 
-def next_month(value):
-    if value.month == 12:
-        return date(value.year + 1, 1, 1)
-    return date(value.year, value.month + 1, 1)
+def add_months(value, months):
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 def value_date(operation_date, operation_type):
@@ -44,10 +47,10 @@ def value_date(operation_date, operation_type):
             return operation_date
         if operation_date.day < 16:
             return date(operation_date.year, operation_date.month, 16)
-        return next_month(operation_date)
+        return add_months(operation_date.replace(day=1), 1)
 
     if operation_date.day <= 15:
-        return date(operation_date.year, operation_date.month, 1)
+        return operation_date.replace(day=1)
     return date(operation_date.year, operation_date.month, 16)
 
 
@@ -60,71 +63,91 @@ def days_360(start, end):
     )
 
 
-def calculate_savings(initial_balance, annual_rate, operations, year):
+def calculate_savings(initial_balance, annual_rate, operations, opening_date, frequency_months):
     balance = money(initial_balance)
     rate = Decimal(str(annual_rate))
-
     if balance < 0:
-        raise ValueError("Le solde initial ne peut pas être négatif.")
+        raise ValueError("Le capital initial ne peut pas être négatif.")
     if rate <= 0:
         raise ValueError("Le taux annuel doit être supérieur à zéro.")
+    if frequency_months not in (3, 6):
+        raise ValueError("Choisissez une capitalisation trimestrielle ou semestrielle.")
 
-    start = date(year, 1, 1)
-    end = date(year + 1, 1, 1)
+    end = add_months(opening_date, 12)
     valued_operations = []
-
     for operation_date, operation_type, amount in operations:
-        if operation_date.year != year:
-            continue
-
         amount = money(amount)
         if amount <= 0:
             raise ValueError("Le montant d’une opération doit être supérieur à zéro.")
-
+        if not opening_date <= operation_date < end:
+            continue
+        effective_date = max(value_date(operation_date, operation_type), opening_date)
+        if effective_date >= end:
+            continue
         signed_amount = amount if operation_type == "Versement" else -amount
-        valued_operations.append(
-            (value_date(operation_date, operation_type), operation_date, operation_type, signed_amount)
-        )
+        valued_operations.append((effective_date, operation_date, operation_type, signed_amount))
 
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
-    segment_start = start
+    divisor = Decimal("360") / rate
     segments = []
+    capitalizations = []
+    operation_index = 0
+    period_start = opening_date
+    total_interest = Decimal("0")
 
-    for value, operation_date, operation_type, signed_amount in valued_operations:
-        if value < start:
-            value = start
-        if value >= end:
-            continue
-
-        days = days_360(segment_start, value)
-        if days > 0:
-            number = balance * Decimal(days) / Decimal("100")
-            segments.append((segment_start, value, balance, days, number))
-
+    def apply_operation(operation):
+        nonlocal balance
+        effective_date, operation_date, operation_type, signed_amount = operation
         balance = money(balance + signed_amount)
         if balance < 0:
             raise ValueError(
                 f"Le retrait du {operation_date.strftime('%d/%m/%Y')} dépasse le solde disponible "
-                f"à sa date de valeur ({value.strftime('%d/%m/%Y')})."
+                f"à sa date de valeur ({effective_date.strftime('%d/%m/%Y')})."
             )
-        segment_start = value
 
-    days = days_360(segment_start, end)
-    if days > 0:
-        number = balance * Decimal(days) / Decimal("100")
-        segments.append((segment_start, end, balance, days, number))
+    while period_start < end:
+        period_end = min(add_months(opening_date, ((period_start.year - opening_date.year) * 12
+                                                   + period_start.month - opening_date.month)
+                                  // frequency_months * frequency_months + frequency_months), end)
+        # Apply transactions effective at the start of this period before interest accrues.
+        while operation_index < len(valued_operations) and valued_operations[operation_index][0] <= period_start:
+            apply_operation(valued_operations[operation_index])
+            operation_index += 1
 
-    total_numbers = sum((segment[4] for segment in segments), Decimal("0"))
-    divisor = Decimal("360") / rate
-    interest = money(total_numbers / divisor)
+        segment_start = period_start
+        period_numbers = Decimal("0")
+        while operation_index < len(valued_operations) and valued_operations[operation_index][0] < period_end:
+            operation = valued_operations[operation_index]
+            effective_date = operation[0]
+            days = days_360(segment_start, effective_date)
+            if days > 0:
+                number = balance * Decimal(days) / Decimal("100")
+                segments.append((segment_start, effective_date, balance, days, number))
+                period_numbers += number
+            segment_start = effective_date
+            apply_operation(operation)
+            operation_index += 1
 
+        days = days_360(segment_start, period_end)
+        if days > 0:
+            number = balance * Decimal(days) / Decimal("100")
+            segments.append((segment_start, period_end, balance, days, number))
+            period_numbers += number
+
+        credited_interest = money(period_numbers / divisor)
+        balance = money(balance + credited_interest)
+        total_interest += credited_interest
+        capitalizations.append((period_end, credited_interest, balance))
+        period_start = period_end
+
+    # Transactions valued exactly on the projection end date are outside the projection.
     return {
         "balance": balance,
-        "interest": interest,
-        "capital": money(balance + interest),
-        "total_numbers": total_numbers,
-        "divisor": divisor,
+        "interest": money(total_interest),
+        "capital": balance,
         "segments": segments,
+        "capitalizations": capitalizations,
+        "end_date": end,
     }
 
 
@@ -206,7 +229,7 @@ if page == "1 · Calcul d’intérêt":
     with left:
         with st.container(border=True):
             c1, c2 = st.columns(2)
-            capital = c1.number_input("Capital initial (TND)", min_value=0.001, value=1000.0, step=100.0)
+            capital = c1.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
             annual_rate = c2.number_input("Taux annuel (%)", min_value=0.0, value=5.0, step=0.25)
             c3, c4 = st.columns(2)
             duration = c3.number_input("Durée", min_value=0.0, value=2.0, step=0.5)
@@ -214,7 +237,7 @@ if page == "1 · Calcul d’intérêt":
 
     with right:
         if duration > 0:
-            interest, final_capital, year_fraction = simple_interest(capital, annual_rate, duration, unit)
+            interest, final_capital, _ = simple_interest(capital, annual_rate, duration, unit)
             with st.container():
                 st.markdown('<div class="estimation-panel">', unsafe_allow_html=True)
                 st.markdown("### Votre estimation")
@@ -233,14 +256,18 @@ else:
     st.markdown(
         "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Suivez les mouvements et estimez les intérêts annuels selon la règle des quinzaines.</p></div>",
+        "<p>Suivez les mouvements et estimez la capitalisation des intérêts sur un an.</p></div>",
         unsafe_allow_html=True,
     )
 
     c1, c2, c3 = st.columns(3)
-    year = int(c1.number_input("Année civile", min_value=1900, max_value=2100, value=2025))
+    opening_date = c1.date_input("Date d’ouverture du compte", value=date.today())
     initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
     rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
+    frequency_label = st.selectbox("Fréquence d’ajout des intérêts", ["Chaque trimestre", "Chaque semestre"])
+    frequency_months = 3 if frequency_label == "Chaque trimestre" else 6
+    projection_end = add_months(opening_date, 12)
+    st.caption(f"Projection du {opening_date.strftime('%d/%m/%Y')} au {projection_end.strftime('%d/%m/%Y')}. Les intérêts sont ajoutés automatiquement à chaque échéance.")
 
     st.markdown("### Activité du compte")
     count = int(st.number_input("Nombre d’opérations", min_value=0, max_value=100, value=0, step=1))
@@ -248,7 +275,7 @@ else:
 
     if count == 0:
         st.markdown("<div class='section-card'><b>Aucun mouvement pour le moment</b><br>"
-                    "<span class='small-note'>L’estimation sera calculée sur la base du solde initial.</span></div>",
+                    "<span class='small-note'>La projection sera calculée sur la base du capital initial.</span></div>",
                     unsafe_allow_html=True)
 
     for index in range(count):
@@ -256,8 +283,8 @@ else:
             st.markdown(f"**Mouvement {index + 1:02d}**")
             cols = st.columns([1.2, 1, 1, 0.8])
             operation_date = cols[0].date_input(
-                "Date de l’opération", value=date(year, 1, 1),
-                min_value=date(year, 1, 1), max_value=date(year, 12, 31),
+                "Date de l’opération", value=opening_date,
+                min_value=opening_date, max_value=projection_end,
                 key=f"savings_date_{index}",
             )
             operation_type = cols[1].selectbox(
@@ -268,39 +295,37 @@ else:
                 key=f"savings_amount_{index}",
             )
             cols[3].caption(
-                f"Date valeur : {value_date(operation_date, operation_type).strftime('%d/%m/%Y')}"
+                f"Date valeur : {max(value_date(operation_date, operation_type), opening_date).strftime('%d/%m/%Y')}"
             )
             operations.append((operation_date, operation_type, amount))
 
     try:
-        result = calculate_savings(initial, rate, operations, year)
-        st.markdown("### Synthèse annuelle")
+        result = calculate_savings(initial, rate, operations, opening_date, frequency_months)
+        st.markdown("### Synthèse après un an")
         m1, m2, m3 = st.columns(3)
-        m1.metric("Solde hors intérêts", format_tnd(result["balance"]))
-        m2.metric("Intérêts estimés", format_tnd(result["interest"]))
+        m1.metric("Capital initial", format_tnd(initial))
+        m2.metric("Intérêts capitalisés", format_tnd(result["interest"]))
         m3.metric("Capital acquis", format_tnd(result["capital"]))
 
-        st.markdown("### Détail du calcul")
-        rows = [{
-            "Du": start.strftime("%d/%m/%Y"),
-            "Au": end.strftime("%d/%m/%Y"),
-            "Solde (TND)": float(money(balance)),
-            "Jours (30/360)": days,
-            "Nombres": float(money(number)),
-        } for start, end, balance, days, number in result["segments"]]
+        st.markdown("### Intérêts ajoutés au compte")
+        capitalization_rows = [{
+            "Échéance": when.strftime('%d/%m/%Y'),
+            "Intérêts ajoutés (TND)": float(amount),
+            "Solde après ajout (TND)": float(balance),
+        } for when, amount, balance in result["capitalizations"]]
+        st.dataframe(capitalization_rows, use_container_width=True, hide_index=True)
 
-        if rows:
+        with st.expander("Détail du calcul des intérêts"):
+            rows = [{
+                "Du": start.strftime('%d/%m/%Y'),
+                "Au": end.strftime('%d/%m/%Y'),
+                "Solde avant intérêts (TND)": float(balance),
+                "Jours (30/360)": days,
+                "Nombres": float(number),
+            } for start, end, balance, days, number in result["segments"]]
             st.dataframe(rows, use_container_width=True, hide_index=True)
-        else:
-            st.info("Aucune période de calcul n’est disponible pour ces paramètres.")
 
-        summary1, summary2 = st.columns(2)
-        summary1.markdown(f"**Total des nombres :** {money(result['total_numbers']):,.3f}")
-        summary2.markdown(f"**Diviseur :** {result['divisor']:,.4f}")
-
-        with st.expander("Comprendre la règle des quinzaines"):
-            st.write("Un versement prend effet le 1er ou le 16 selon sa date d’opération. "
-                     "Un retrait est pris en compte au début de la quinzaine correspondante. "
-                     "Les intérêts sont calculés sur les soldes successifs, avec une année commerciale de 360 jours.")
+        with st.expander("Comprendre le calcul"):
+            st.write("Le capital initial est celui déposé à la date d’ouverture. Les intérêts sont calculés selon une année commerciale de 360 jours et ajoutés au solde à chaque échéance trimestrielle ou semestrielle choisie. Les versements et retraits suivent la règle des quinzaines.")
     except ValueError as error:
         st.error(str(error))
