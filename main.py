@@ -318,37 +318,53 @@ else:
     rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
 
     st.markdown("### Activité du compte")
-    count = int(st.number_input("Nombre d’opérations", min_value=0, max_value=100, value=0, step=1))
-    operations = []
+    operations_key = f"savings_operations_{year}"
+    if operations_key not in st.session_state:
+        st.session_state[operations_key] = []
+    operations = st.session_state[operations_key]
 
-    if count == 0:
+    with st.form(f"add_operation_form_{year}", clear_on_submit=True):
+        st.markdown("**Ajouter une opération**")
+        op_date_col, op_type_col, amount_col, submit_col = st.columns([1.2, 1, 1, 0.8])
+        operation_date = op_date_col.date_input(
+            "Date de l’opération",
+            value=date(year, 1, 1),
+            min_value=date(year, 1, 1),
+            max_value=date(year, 12, 31),
+            key=f"new_operation_date_{year}",
+        )
+        operation_type = op_type_col.selectbox(
+            "Type de mouvement", ["Versement", "Retrait"], key=f"new_operation_type_{year}"
+        )
+        amount = amount_col.number_input(
+            "Montant (TND)", min_value=0.0, value=100.0, step=50.0,
+            key=f"new_operation_amount_{year}",
+        )
+        submitted = submit_col.form_submit_button("Ajouter", type="primary", use_container_width=True)
+
+    if submitted:
+        operations.append((operation_date, operation_type, amount))
+        st.session_state[operations_key] = operations
+        st.success("Opération ajoutée au tableau.")
+
+    if operations:
+        st.markdown("#### Opérations enregistrées")
+        operation_rows = [
+            {
+                "Date": op_date.strftime("%d/%m/%Y"),
+                "Type": op_type,
+                "Montant (TND)": float(money(op_amount)),
+                "Date valeur": value_date(op_date, op_type).strftime("%d/%m/%Y"),
+            }
+            for op_date, op_type, op_amount in sorted(operations, key=lambda operation: (operation[0], operation[1]))
+        ]
+        st.dataframe(operation_rows, use_container_width=True, hide_index=True)
+    else:
         st.markdown(
-            "<div class='section-card'><b>Aucun mouvement pour le moment</b><br>"
-            "<span class='small-note'>L’estimation sera calculée sur la base du solde initial.</span></div>",
+            "<div class='section-card'><b>Aucune opération enregistrée</b><br>"
+            "<span class='small-note'>Ajoutez un versement ou un retrait avec le formulaire ci-dessus.</span></div>",
             unsafe_allow_html=True,
         )
-
-    for index in range(count):
-        with st.container(border=True):
-            st.markdown(f"**Mouvement {index + 1:02d}**")
-            cols = st.columns([1.2, 1, 1, 0.8])
-            operation_date = cols[0].date_input(
-                "Date de l’opération",
-                value=date(year, 1, 1),
-                min_value=date(year, 1, 1),
-                max_value=date(year, 12, 31),
-                key=f"savings_date_{index}",
-            )
-            operation_type = cols[1].selectbox(
-                "Type de mouvement", ["Versement", "Retrait"], key=f"savings_type_{index}"
-            )
-            amount = cols[2].number_input(
-                "Montant (TND)", min_value=0.0, value=100.0, step=50.0,
-                key=f"savings_amount_{index}",
-            )
-            cols[3].markdown("<br>", unsafe_allow_html=True)
-            cols[3].caption(f"Date valeur : {value_date(operation_date, operation_type).strftime('%d/%m/%Y')}")
-            operations.append((operation_date, operation_type, amount))
 
     try:
         result = calculate_savings(initial, rate, operations, year)
@@ -358,7 +374,7 @@ else:
         m2.metric("Intérêts estimés", format_tnd(result["interest"]))
         m3.metric("Capital acquis", format_tnd(result["capital"]))
 
-        st.markdown("### Détail du calcul")
+        st.markdown("### Détail du calcul des intérêts")
         rows = [
             {
                 "Du": start.strftime("%d/%m/%Y"),
