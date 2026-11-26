@@ -160,13 +160,13 @@ st.markdown(
       }
       [data-testid="stHeader"] { background: rgba(248, 246, 239, .92); }
       [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #faf8ff 0%, #eef8f5 100%);
-        border-right: 1px solid #ddd7ed;
+        background: linear-gradient(180deg, #087e72 0%, #22a99a 100%);
+        border-right: 1px solid #087266;
       }
-      [data-testid="stSidebar"] * { color: #26344d !important; }
-      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #5d6680 !important; }
-      [data-testid="stSidebar"] hr { border-color: #ddd7ed; }
-      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #737c91 !important; }
+      [data-testid="stSidebar"] * { color: #ffffff !important; }
+      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #e2f7f3 !important; }
+      [data-testid="stSidebar"] hr { border-color: rgba(255, 255, 255, .28); }
+      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #d8f3ef !important; }
       h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -.035em; }
       .stMainBlockContainer { padding-top: 2rem; }
       .estimate-heading {
