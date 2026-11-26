@@ -18,23 +18,22 @@ def format_tnd(value):
     return formatted.replace(",", " ").replace(".", ",") + " TND"
 
 
-def compound_interest(capital, annual_rate_percent, duration_years, frequency):
-    """Calculate compound interest with quarterly or semiannual capitalization."""
+def compound_interest(capital, annual_rate_percent, duration_years, periods_per_year):
+    """Calculate compound interest from a total duration and period length."""
     capital = Decimal(str(capital))
     rate = Decimal(str(annual_rate_percent)) / Decimal("100")
     duration = Decimal(str(duration_years))
-    periods_per_year = {"Trimestrielle": Decimal("4"), "Semestrielle": Decimal("2")}[frequency]
 
-    if duration < 0:
-        raise ValueError("La durée doit être positive ou égale à zéro.")
+    if duration <= 0:
+        raise ValueError("La durée de capitalisation doit être supérieure à zéro.")
     if rate < 0:
         raise ValueError("Le taux annuel ne peut pas être négatif.")
 
-    total_periods = duration * periods_per_year
+    total_periods = duration * Decimal(str(periods_per_year))
     if total_periods != total_periods.to_integral_value():
-        raise ValueError("La durée doit correspondre à des périodes complètes de capitalisation.")
+        raise ValueError("La durée doit correspondre à des périodes de capitalisation complètes.")
 
-    periodic_rate = rate / periods_per_year
+    periodic_rate = rate / Decimal(str(periods_per_year))
     periods = int(total_periods)
     growth = (Decimal("1") + periodic_rate) ** periods
     final_capital = money(capital * growth)
@@ -331,34 +330,41 @@ else:
     st.markdown(
         "<div class='hero'><div class='eyebrow'>ESPACE FINANCE &nbsp; / &nbsp; 02</div>"
         "<h1>Compte d’épargne</h1>"
-        "<p>Simulez la capitalisation trimestrielle ou semestrielle de votre épargne.</p></div>",
+        "<p>Simulez la capitalisation selon la durée choisie.</p></div>",
         unsafe_allow_html=True,
     )
 
     st.markdown("### Vue d’ensemble du compte")
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4 = st.columns(4)
     start_date = c1.date_input("Date", value=date.today())
     initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=1000.0, step=100.0)
     compound_rate = c3.number_input("Taux d’intérêt (%)", min_value=0.0, value=5.0, step=0.25)
-    duration = c4.number_input("Durée (années)", min_value=0.0, value=2.0, step=0.25)
-    frequency = c5.selectbox("Capitalisation", ["Trimestrielle", "Semestrielle"])
+
+    capitalization_duration = c4.selectbox(
+        "Durée de capitalisation",
+        ["3 mois", "6 mois", "1 an"],
+    )
+    capitalization_options = {
+        "3 mois": (4, "Trimestrielle"),
+        "6 mois": (2, "Semestrielle"),
+        "1 an": (1, "Annuelle"),
+    }
+    periods_per_year, capitalization_label = capitalization_options[capitalization_duration]
 
     st.markdown("### Estimation de la capitalisation")
     try:
-        if duration == 0:
-            st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
-        else:
-            interest, final_capital, periodic_rate = compound_interest(
-                initial, compound_rate, duration, frequency
-            )
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Intérêts générés", format_tnd(interest))
-            m2.metric("Capital acquis", format_tnd(final_capital))
-            m3.metric("Taux par période", f"{periodic_rate * Decimal('100'):.4f} %")
+        interest, final_capital, periodic_rate = compound_interest(
+            initial, compound_rate, 1.0, periods_per_year
+        )
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Intérêts générés sur 1 an", format_tnd(interest))
+        m2.metric("Capital acquis après 1 an", format_tnd(final_capital))
+        m3.metric("Capitalisation", capitalization_label)
 
         with st.expander("Comprendre la capitalisation"):
             st.write(
-                "Chaque trimestre ou semestre, les intérêts sont ajoutés au capital puis produisent à leur tour des intérêts. "
+                f"Avec une durée de capitalisation de **{capitalization_duration}**, les intérêts sont ajoutés au capital "
+                f"{capitalization_label.lower()} puis produisent à leur tour des intérêts. "
                 "La formule utilisée est **Cₙ = C₀ × (1 + r/p)^(p×n)**, où r est le taux annuel, "
                 "p le nombre de périodes par année et n la durée en années."
             )
