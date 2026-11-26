@@ -121,12 +121,15 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
     def apply_operation(operation):
         nonlocal balance
         effective_date, operation_date, operation_type, signed_amount = operation
-        balance = money(balance + signed_amount)
-        if balance < 0:
+        new_balance = money(balance + signed_amount)
+        if new_balance < 0:
             raise ValueError(
-                f"Le retrait du {operation_date.strftime('%d/%m/%Y')} dépasse le solde disponible "
-                f"à sa date de valeur ({effective_date.strftime('%d/%m/%Y')})."
+                f"Retrait refusé : le montant ({format_tnd(-signed_amount)}) dépasse le solde "
+                f"disponible ({format_tnd(balance)}) à la date de valeur "
+                f"({effective_date.strftime('%d/%m/%Y')}). Opération du "
+                f"{operation_date.strftime('%d/%m/%Y')} non ajoutée."
             )
+        balance = new_balance
         statement_rows.append({
             "Date d’opération": operation_date.strftime("%d/%m/%Y"),
             "Date de valeur": effective_date.strftime("%d/%m/%Y"),
@@ -340,7 +343,7 @@ else:
         st.session_state.savings_operations = []
 
     st.markdown("### Ajouter une opération")
-    with st.form("savings_operation_form", clear_on_submit=True):
+    with st.form("savings_operation_form"):
         operation_cols = st.columns([1.2, 1, 1])
         operation_date = operation_cols[0].date_input(
             "Date de l’opération",
@@ -355,8 +358,19 @@ else:
         submitted = st.form_submit_button("＋ Ajouter au tableau", type="primary")
 
     if submitted:
-        st.session_state.savings_operations.append((operation_date, operation_type, amount))
-        st.success("Opération ajoutée au tableau du compte.")
+        candidate_operations = st.session_state.savings_operations + [
+            (operation_date, operation_type, amount)
+        ]
+        try:
+            # Validate the new transaction against the running balance before saving it.
+            calculate_savings(initial, rate, candidate_operations, opening_date, frequency_months)
+        except ValueError as error:
+            st.error(str(error))
+        else:
+            st.session_state.savings_operations.append(
+                (operation_date, operation_type, amount)
+            )
+            st.success("Opération ajoutée au tableau du compte.")
 
     operations = st.session_state.savings_operations
     if not operations:
