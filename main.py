@@ -89,7 +89,7 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
             continue
 
         signed_amount = amount if operation_type == "Versement" else -amount
-        valued_operations.append((effectiveive_date if False else effective_date, operation_date, operation_type, signed_amount))
+        valued_operations.append((effective_date, operation_date, operation_type, signed_amount))
 
     valued_operations.sort(key=lambda item: (item[0], item[1], item[2]))
     divisor = Decimal("360") / rate
@@ -138,8 +138,6 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
     for operation in valued_operations:
         effective_date = operation[0]
 
-        # Interest stays pending at each capitalization date. It is posted only
-        # when a transaction has a value date strictly after that date.
         while next_boundary < effective_date:
             accrue(next_boundary)
             boundary_passed = True
@@ -171,8 +169,6 @@ def calculate_savings(initial_balance, annual_rate, operations, opening_date, fr
         accrue(effective_date)
         apply_operation(operation)
 
-    # Accrue the remainder of the projection, but do not display or post it:
-    # there has not yet been an operation after a capitalization date.
     accrue(end)
 
     return {
@@ -199,21 +195,26 @@ st.markdown(
       :root {
         --ink: #20354a; --muted: #718096; --teal: #167c70; --teal-dark: #11675e;
         --canvas: #f2f0e9; --surface: #faf9f5; --line: #e4e0d5; --gold: #c49a53;
+        --soft-teal: #e4f3ef; --soft-gold: #f6edda;
       }
       html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
       .stApp { background: var(--canvas); color: var(--ink); }
       [data-testid="stHeader"] { background: rgba(242, 240, 233, .92); backdrop-filter: blur(10px); }
-      [data-testid="stSidebar"] { background: #20384b; border-right: 1px solid #304a5c; }
+      [data-testid="stSidebar"] { background: linear-gradient(180deg, #20384b 0%, #172d3e 100%); border-right: 1px solid #304a5c; }
       [data-testid="stSidebar"] * { color: #f2f0e9 !important; }
       [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #c2d0d5 !important; }
       [data-testid="stSidebar"] hr { border-color: #496070; }
+      [data-testid="stSidebar"] [role="radiogroup"] label { background: transparent; border-radius: 10px; padding: 7px 10px; margin: 3px 0; }
+      [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) { background: rgba(79, 195, 168, .16); }
       h1, h2, h3 { font-family: 'Manrope', sans-serif; color: var(--ink); letter-spacing: -.035em; }
+      h2 { font-size: 1.55rem; margin-top: .5rem; }
+      h3 { font-size: 1.22rem; }
       .stMainBlockContainer { padding-top: 2rem; }
       .hero {
-        position: relative; overflow: hidden; padding: 1.8rem 2rem; border-radius: 20px;
+        position: relative; overflow: hidden; padding: 2.1rem 2.2rem; border-radius: 22px;
         margin: .15rem 0 1.7rem; color: #f7f5ef;
-        background: linear-gradient(118deg, #20384b 0%, #27665f 100%);
-        box-shadow: 0 14px 34px rgba(32, 56, 75, .13);
+        background: linear-gradient(118deg, #20384b 0%, #27665f 70%, #3a8577 100%);
+        box-shadow: 0 16px 36px rgba(32, 56, 75, .16);
         animation: hero-enter .5s ease-out both;
       }
       .hero::after {
@@ -221,31 +222,43 @@ st.markdown(
         right: -75px; top: -135px; border: 1px solid rgba(242,240,233,.17);
         box-shadow: 0 0 0 25px rgba(242,240,233,.035), 0 0 0 52px rgba(242,240,233,.025);
       }
-      .hero h1 { color: #f7f5ef; margin: 0 0 .4rem; font-size: 2rem; }
-      .hero p { color: #d7e2dc; margin: 0; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #d8bd83;
-                 font-weight: 700; font-size: .72rem; margin-bottom: .5rem; }
-      .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-                      padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
+      .hero h1 { color: #f7f5ef; margin: 0 0 .45rem; font-size: 2.35rem; font-weight: 800; }
+      .hero p { color: #dfe9e4; margin: 0; font-size: 1.02rem; }
+      .eyebrow { text-transform: uppercase; letter-spacing: .18em; color: #efd78f;
+                 font-weight: 800; font-size: .76rem; margin-bottom: .55rem; }
+      .section-card { background: linear-gradient(135deg, var(--surface), #edf5f2); border: 1px solid #d5e5df;
+                      border-radius: 16px; padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
       .estimation-panel {
-        background: linear-gradient(145deg, #faf9f5 0%, #edf5f2 100%);
-        border: 1px solid #d7e4df; border-radius: 20px; padding: 1.35rem;
+        background: linear-gradient(145deg, #faf9f5 0%, #edf7f3 100%);
+        border: 1px solid #d1e5de; border-radius: 20px; padding: 1.35rem;
         box-shadow: 0 12px 28px rgba(32, 56, 75, .09);
       }
-      .estimation-panel h3 { margin: 0 0 1rem; font-size: 1.25rem; }
-      .estimation-panel [data-testid="stMetric"] { min-height: 118px; }
+      .estimation-panel h3 { margin: 0 0 1rem; font-size: 1.35rem; }
       [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 16px; transition: box-shadow .2s ease, transform .2s ease; }
       [data-testid="stVerticalBlockBorderWrapper"]:hover { box-shadow: 0 10px 24px rgba(32,56,75,.08); transform: translateY(-1px); }
-      [data-testid="stMetric"] { background: var(--surface); border: 1px solid var(--line);
-        border-radius: 15px; padding: 1.05rem 1.2rem; animation: metric-enter .45s ease both; }
-      [data-testid="stMetricLabel"] { color: var(--muted); font-weight: 600; }
-      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; font-size: 1.55rem; }
-      div.stButton > button[kind="primary"] { background: var(--teal); border: 0; border-radius: 10px; }
-      div.stButton > button[kind="primary"]:hover { background: var(--teal-dark); }
-      .small-note { color: var(--muted); font-size: .87rem; }
-      [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      [data-testid="stMetric"] { background: linear-gradient(145deg, #ffffff 0%, var(--soft-teal) 100%); border: 1px solid #d5e7e1;
+        border-radius: 15px; padding: 1.15rem 1.25rem; animation: metric-enter .45s ease both;
+        box-shadow: 0 8px 18px rgba(22, 124, 112, .07); }
+      [data-testid="stMetricLabel"] { color: #5d7280; font-weight: 700; font-size: .95rem; }
+      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; font-size: 1.75rem; }
+      div.stButton > button[kind="primary"] { background: linear-gradient(135deg, var(--teal), #239585); border: 0;
+        border-radius: 11px; padding: .55rem 1.1rem; font-weight: 700; box-shadow: 0 7px 16px rgba(22,124,112,.16); }
+      div.stButton > button[kind="primary"]:hover { background: var(--teal-dark); transform: translateY(-1px); }
+      [data-testid="stForm"] { background: linear-gradient(145deg, #ffffff 0%, #f1f7f4 100%); border: 1px solid #d8e5df;
+        border-radius: 18px; padding: 1.1rem 1.25rem; box-shadow: 0 10px 24px rgba(32,56,75,.06); }
+      [data-testid="stForm"] label { color: #4e6573; font-weight: 700; }
+      [data-testid="stDataFrame"] { border: 1px solid #dde4e8; border-radius: 14px; overflow: hidden;
+        box-shadow: 0 8px 20px rgba(32,56,75,.05); }
+      [data-testid="stExpander"] { border: 1px solid #e1dfd4; border-radius: 14px; background: var(--surface); }
+      .small-note { color: var(--muted); font-size: .92rem; }
+      .stSuccess { border-radius: 12px; background: #e8f5ef; }
       @keyframes hero-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes metric-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+      @media (max-width: 640px) {
+        .hero { padding: 1.6rem 1.35rem; }
+        .hero h1 { font-size: 1.75rem; }
+        h2 { font-size: 1.35rem; }
+      }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       }
@@ -256,7 +269,7 @@ st.markdown(
 
 with st.sidebar:
     st.markdown("## ◈ FINANCE")
-    st.markdown("Votre espace de calcul financier")
+    st.markdown("**Votre espace de calcul financier**")
     st.markdown("---")
     st.markdown("**ESPACE DE TRAVAIL**")
     page = st.radio("Navigation", ["1 · Calcul d’intérêt", "2 · Compte d’épargne"], label_visibility="collapsed")
