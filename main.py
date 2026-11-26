@@ -145,6 +145,7 @@ st.markdown(
         --violet: #7357d9;
         --violet-dark: #5b43b5;
         --teal: #087e72;
+        --teal-light: #22a99a;
         --coral: #ef766a;
         --gold: #d7a43b;
         --canvas: #f7f4ed;
@@ -176,8 +177,8 @@ st.markdown(
       .hero {
         position: relative; overflow: hidden; padding: 1.8rem 2rem; border-radius: 20px;
         margin: .15rem 0 1.7rem; color: #ffffff;
-        background: linear-gradient(118deg, #7357d9 0%, #a85fc1 48%, #ef766a 100%);
-        box-shadow: 0 14px 34px rgba(115, 87, 217, .18);
+        background: linear-gradient(118deg, #087e72 0%, #159889 55%, #22a99a 100%);
+        box-shadow: 0 14px 34px rgba(8, 126, 114, .18);
         animation: page-enter .52s cubic-bezier(.2,.7,.25,1) both;
       }
       .hero:after {
@@ -186,8 +187,8 @@ st.markdown(
         box-shadow: 0 0 0 24px rgba(255,255,255,.08), 0 0 0 50px rgba(255,255,255,.05);
       }
       .hero h1 { color: #ffffff; margin: 0 0 .4rem; font-size: 2rem; }
-      .hero p { color: #fffaf5; margin: 0; font-size: 1rem; }
-      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #ffe0a0;
+      .hero p { color: #e9fffb; margin: 0; font-size: 1rem; }
+      .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #bff3e9;
                  font-weight: 800; font-size: .72rem; margin-bottom: .5rem; }
       .section-card {
         background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
