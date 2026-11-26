@@ -239,7 +239,7 @@ else:
 
     c1, c2, c3 = st.columns(3)
     year = int(c1.number_input("Année civile", min_value=1900, max_value=2100, value=2025))
-    initial = c2.number_input("Solde au 1er janvier (TND)", min_value=0.0, value=1000.0, step=100.0)
+    initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
     rate = c3.number_input("Taux annuel (%)", min_value=0.01, value=5.0, step=0.25)
 
     st.markdown("### Activité du compte")
