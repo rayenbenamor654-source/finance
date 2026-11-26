@@ -91,7 +91,7 @@ def build_ledger(initial_balance, operations, start_date, annual_rate, capitaliz
             rows.append({
                 "Date d’opération": date_of_credit.strftime("%d/%m/%Y"),
                 "Date de valeur": date_of_credit.strftime("%d/%m/%Y"),
-                "Type": "Intérêt",
+                "Type": "Capitalisation",
                 "Montant (TND)": format_tnd(interest),
                 "Solde (TND)": format_tnd(balance),
             })
