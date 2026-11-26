@@ -163,11 +163,19 @@ st.markdown(
       .eyebrow { text-transform: uppercase; letter-spacing: .15em; color: #d8bd83;
                  font-weight: 700; font-size: .72rem; margin-bottom: .5rem; }
       .section-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-                      padding: 1.2rem 1.35rem; margin-bottom: 1rem; }
+                      padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
+      .estimation-panel {
+        background: linear-gradient(145deg, #faf9f5 0%, #edf5f2 100%);
+        border: 1px solid #d7e4df; border-radius: 20px; padding: 1.35rem;
+        box-shadow: 0 12px 28px rgba(32, 56, 75, .09);
+      }
+      .estimation-panel h3 { margin: 0 0 1rem; font-size: 1.25rem; }
+      .estimation-panel [data-testid="stMetric"] { min-height: 118px; }
       [data-testid="stMetric"] { background: var(--surface); border: 1px solid var(--line);
         border-radius: 15px; padding: 1.05rem 1.2rem; }
       [data-testid="stMetricLabel"] { color: var(--muted); font-weight: 600; }
-      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif; }
+      [data-testid="stMetricValue"] { color: var(--teal); font-family: 'Manrope', sans-serif;
+        font-size: 1.55rem; }
       div.stButton > button[kind="primary"] { background: var(--teal); border: 0; }
       .small-note { color: var(--muted); font-size: .87rem; }
       [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
@@ -207,15 +215,17 @@ if page == "1 · Calcul d’intérêt":
     with right:
         if duration > 0:
             interest, final_capital, year_fraction = simple_interest(capital, annual_rate, duration, unit)
-            st.markdown("### Votre estimation")
-            st.metric("Intérêts générés", format_tnd(interest))
-            st.metric("Capital final estimé", format_tnd(final_capital))
-            st.markdown(
-                f"<div class='section-card'><b>Votre calcul</b><br><span class='small-note'>"
-                f"I = C × t × n<br>{format_tnd(capital)} × {annual_rate:.2f} % × "
-                f"{year_fraction:.4f} an(s)</span></div>",
-                unsafe_allow_html=True,
-            )
+            with st.container():
+                st.markdown('<div class="estimation-panel">', unsafe_allow_html=True)
+                st.markdown("### Votre estimation")
+                st.metric("Intérêts générés", format_tnd(interest))
+                st.metric("Capital final estimé", format_tnd(final_capital))
+                st.markdown(
+                    f"<p class='small-note'>I = C × t × n<br>{format_tnd(capital)} × "
+                    f"{annual_rate:.2f} % × {year_fraction:.4f} an(s)</p>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
 
