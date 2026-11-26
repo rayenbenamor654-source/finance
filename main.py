@@ -220,11 +220,6 @@ if page == "1 · Calcul d’intérêt":
                 st.markdown("### Votre estimation")
                 st.metric("Intérêts générés", format_tnd(interest))
                 st.metric("Capital final estimé", format_tnd(final_capital))
-                st.markdown(
-                    f"<p class='small-note'>I = C × t × n<br>{format_tnd(capital)} × "
-                    f"{annual_rate:.2f} % × {year_fraction:.4f} an(s)</p>",
-                    unsafe_allow_html=True,
-                )
                 st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.info("Saisissez une durée supérieure à zéro pour afficher l’estimation.")
