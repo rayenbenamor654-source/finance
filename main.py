@@ -6,6 +6,8 @@ import streamlit as st
 
 
 TND = Decimal("0.001")
+DAYS_PER_YEAR = Decimal("360")
+DEFAULT_WITHHOLDING_TAX_PERCENT = Decimal("20")
 
 
 def money(value):
@@ -48,29 +50,44 @@ def value_date(operation_date, operation_type):
     raise ValueError("Type d'opération invalide.")
 
 
-def build_ledger(initial_balance, operations, start_date, annual_rate, capitalization_months):
-    balance = Decimal(str(initial_balance))
+def build_ledger(
+    initial_balance,
+    operations,
+    start_date,
+    annual_rate,
+    capitalization_months,
+    withholding_tax_percent=DEFAULT_WITHHOLDING_TAX_PERCENT,
+):
+    """Build the ledger with actual-day, 30/360 simple interest by capitalization period."""
+    balance = money(initial_balance)
     annual_rate = Decimal(str(annual_rate)) / Decimal("100")
-    periods_per_year = Decimal("12") / Decimal(str(capitalization_months))
-    periodic_rate = annual_rate / periods_per_year
+    withholding_rate = Decimal(str(withholding_tax_percent)) / Decimal("100")
 
     transaction_events = []
     for index, (operation_date, operation_type, amount) in enumerate(operations):
         amount = Decimal(str(amount))
         if amount <= 0:
             raise ValueError("Le montant d'une opération doit être supérieur à zéro.")
-        effective_date = max(value_date(operation_date, operation_type), start_date)
+        raw_value_date = value_date(operation_date, operation_type)
+        effective_date = max(raw_value_date, start_date)
         signed_amount = amount if operation_type == "Versement" else -amount
         transaction_events.append(
-            (effective_date, 1, index, operation_date, operation_type, amount, signed_amount)
+            (effective_date, 1, index, operation_date, raw_value_date, operation_type, amount, signed_amount)
         )
 
     last_event_date = max((event[0] for event in transaction_events), default=start_date)
-    events = list(transaction_events)
-    capitalization_date = add_months(start_date, capitalization_months)
+    events = [
+        (event[0], event[1], event[2], "operation", event)
+        for event in transaction_events
+    ]
+
+    # Derive boundaries from the account start date and selected duration. Only
+    # completed periods through the last value date are capitalized; later
+    # operations remain in the open period until its actual boundary.
     period_number = 1
+    capitalization_date = add_months(start_date, capitalization_months * period_number)
     while capitalization_date <= last_event_date:
-        events.append((capitalization_date, 0, period_number, capitalization_date))
+        events.append((capitalization_date, 0, period_number, "capitalization", None))
         period_number += 1
         capitalization_date = add_months(start_date, capitalization_months * period_number)
 
@@ -80,24 +97,39 @@ def build_ledger(initial_balance, operations, start_date, annual_rate, capitaliz
         "Date de valeur": start_date.strftime("%d/%m/%Y"),
         "Type": "Ouverture",
         "Montant (TND)": format_tnd(balance),
+        "Intérêts bruts (TND)": "—",
+        "Retenue fiscale (TND)": "—",
         "Solde (TND)": format_tnd(balance),
     }]
 
-    for event in events:
-        if event[1] == 0:
-            date_of_credit = event[0]
-            interest = money(balance * periodic_rate)
-            balance = money(balance + interest)
+    cursor = start_date
+    accrued_interest = Decimal("0")
+    for event_date, _, _, event_type, payload in events:
+        elapsed_days = (event_date - cursor).days
+        if elapsed_days > 0:
+            accrued_interest += (
+                balance * Decimal(elapsed_days) * annual_rate / DAYS_PER_YEAR
+            )
+            cursor = event_date
+
+        if event_type == "capitalization":
+            gross_interest = money(accrued_interest)
+            tax = money(gross_interest * withholding_rate)
+            net_interest = money(gross_interest - tax)
+            balance = money(balance + net_interest)
             rows.append({
-                "Date d’opération": date_of_credit.strftime("%d/%m/%Y"),
-                "Date de valeur": date_of_credit.strftime("%d/%m/%Y"),
+                "Date d’opération": event_date.strftime("%d/%m/%Y"),
+                "Date de valeur": event_date.strftime("%d/%m/%Y"),
                 "Type": "Capitalisation",
-                "Montant (TND)": format_tnd(interest),
+                "Montant (TND)": format_tnd(net_interest),
+                "Intérêts bruts (TND)": format_tnd(gross_interest),
+                "Retenue fiscale (TND)": format_tnd(tax),
                 "Solde (TND)": format_tnd(balance),
             })
+            accrued_interest = Decimal("0")
             continue
 
-        _, _, _, operation_date, operation_type, amount, signed_amount = event
+        _, _, _, operation_date, raw_value_date, operation_type, amount, signed_amount = payload
         next_balance = balance + signed_amount
         if next_balance < 0:
             raise ValueError(
@@ -107,13 +139,15 @@ def build_ledger(initial_balance, operations, start_date, annual_rate, capitaliz
         balance = money(next_balance)
         rows.append({
             "Date d’opération": operation_date.strftime("%d/%m/%Y"),
-            "Date de valeur": value_date(operation_date, operation_type).strftime("%d/%m/%Y"),
+            "Date de valeur": max(raw_value_date, start_date).strftime("%d/%m/%Y"),
             "Type": operation_type,
             "Montant (TND)": format_tnd(amount),
+            "Intérêts bruts (TND)": "—",
+            "Retenue fiscale (TND)": "—",
             "Solde (TND)": format_tnd(balance),
         })
 
-    return rows, balance
+    return rows, balance, money(accrued_interest)
 
 
 st.set_page_config(
@@ -222,7 +256,8 @@ else:
             start_date = c1.date_input("Date de début", value=date.today())
             initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
             annual_rate = c3.number_input("Taux d’intérêt annuel (%)", min_value=0.0, value=5.0, step=0.25)
-            capitalization_duration = c4.selectbox("Durée de capitalisation", ["3 mois", "6 mois", "1 an"])
+            capitalization_duration = c4.selectbox("Durée de capitalisation", ["1 mois", "3 mois", "6 mois", "1 an"])
+            apply_tax = st.checkbox("Appliquer la retenue fiscale de 20 % (cours)", value=True)
             start_account = st.form_submit_button("Démarrer le compte épargne", type="primary")
 
         if start_account:
@@ -231,6 +266,7 @@ else:
                 "initial": initial,
                 "rate": annual_rate,
                 "capitalization_duration": capitalization_duration,
+                "withholding_tax_percent": 20 if apply_tax else 0,
             }
             st.session_state[operations_key] = []
             st.session_state.savings_account_started = True
@@ -242,8 +278,9 @@ else:
     start_date = account["date"]
     initial = account["initial"]
     annual_rate = account["rate"]
+    withholding_tax_percent = account.get("withholding_tax_percent", 20)
     operations = st.session_state.get(operations_key, [])
-    capitalization_months = {"3 mois": 3, "6 mois": 6, "1 an": 12}[account["capitalization_duration"]]
+    capitalization_months = {"1 mois": 1, "3 mois": 3, "6 mois": 6, "1 an": 12}[account["capitalization_duration"]]
 
     st.markdown("### Vue d’ensemble du compte")
     info1, info2, info3, info4 = st.columns(4)
@@ -251,6 +288,10 @@ else:
     info2.metric("Capital initial", format_tnd(initial))
     info3.metric("Taux d’intérêt", f"{annual_rate:.2f} %")
     info4.metric("Durée de capitalisation", account["capitalization_duration"])
+    if withholding_tax_percent:
+        st.caption(f"Retenue fiscale appliquée à chaque capitalisation : {withholding_tax_percent:.0f} % des intérêts bruts.")
+    else:
+        st.caption("Aucune retenue fiscale n’est appliquée aux intérêts.")
 
     if st.button("Fermer le compte et recommencer"):
         st.session_state.savings_account_started = False
@@ -275,7 +316,10 @@ else:
     if add_operation:
         candidate_operations = operations + [(operation_date, operation_type, amount)]
         try:
-            build_ledger(initial, candidate_operations, start_date, annual_rate, capitalization_months)
+            build_ledger(
+                initial, candidate_operations, start_date, annual_rate,
+                capitalization_months, withholding_tax_percent,
+            )
             st.session_state[operations_key] = candidate_operations
             st.success("Opération ajoutée au compte.")
             st.rerun()
@@ -283,12 +327,19 @@ else:
             st.error(str(error))
 
     try:
-        ledger_rows, current_balance = build_ledger(
-            initial, operations, start_date, annual_rate, capitalization_months
+        ledger_rows, current_balance, pending_interest = build_ledger(
+            initial, operations, start_date, annual_rate,
+            capitalization_months, withholding_tax_percent,
         )
         st.markdown("### Historique du compte")
-        st.metric("Solde disponible", format_tnd(current_balance))
-        st.caption(f"Les intérêts sont crédités automatiquement tous les {capitalization_months} mois.")
+        balance_col, pending_col = st.columns(2)
+        balance_col.metric("Solde disponible", format_tnd(current_balance))
+        pending_col.metric("Intérêts bruts en attente", format_tnd(pending_interest))
+        st.caption(
+            f"Les intérêts sont calculés par tranches de jours (base 360) et crédités tous les "
+            f"{capitalization_months} mois. Les opérations après la dernière capitalisation restent "
+            "dans la période en cours ; les intérêts affichés comme en attente ne sont pas encore crédités."
+        )
         st.dataframe(ledger_rows, use_container_width=True, hide_index=True)
     except ValueError as error:
         st.error(str(error))
