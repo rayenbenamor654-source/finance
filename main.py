@@ -257,7 +257,7 @@ else:
             initial = c2.number_input("Capital initial (TND)", min_value=0.0, value=0.0, step=100.0)
             annual_rate = c3.number_input("Taux d’intérêt annuel (%)", min_value=0.0, value=5.0, step=0.25)
             capitalization_duration = c4.selectbox("Durée de capitalisation", ["1 mois", "3 mois", "6 mois", "1 an"])
-            apply_tax = st.checkbox("Appliquer la retenue fiscale de 20 % (cours)", value=True)
+            apply_tax = st.checkbox("Appliquer la retenue fiscale de 20 %", value=True)
             start_account = st.form_submit_button("Démarrer le compte épargne", type="primary")
 
         if start_account:
